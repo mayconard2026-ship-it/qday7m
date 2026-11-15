@@ -1,0 +1,2 @@
+# qday7m
+Moedas 
