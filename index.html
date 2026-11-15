@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌡 Termômetro Q-Day</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0b0e14; --border: #2a3241;
+    --text: #e6edf3; --text2: #8b949e;
+    --green: #2ea043; --green-bg: #0d2818;
+    --red: #da3633; --red-bg: #2d0f0f;
+    --neutral: #8b949e; --neutral-bg: #1c2330;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+  body { background: #030308; background-image: radial-gradient(circle at 20% 10%, rgba(100,40,180,.3) 0%, transparent 40%), radial-gradient(circle at 80% 90%, rgba(20,80,200,.3) 0%, transparent 50%); background-attachment: fixed; color: var(--text); font-family: var(--font); min-height: 100vh; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
+  .small-star { position: fixed; background: #fff; border-radius: 50%; animation: twinkle linear infinite; pointer-events: none; z-index: 0; }
+  @keyframes twinkle { 0%,100% { opacity: .1; } 50% { opacity: .9; } }
+  .header, .featured, .grid, .detail, .oldest-section { position: relative; z-index: 1; }
+  .header { text-align: center; margin-bottom: 40px; width: 100%; max-width: 1200px; display: flex; flex-direction: column; align-items: center; }
+  .header-title-wrap { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+  .header h1 { font-size: 2.8rem; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; background: linear-gradient(135deg, #58a6ff, #bc8cff 50%, #ff8a65); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: gradientShift 4s linear infinite; }
+  @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+  .header-title-accent { width: 80px; height: 4px; background: linear-gradient(90deg, transparent, #58a6ff, #bc8cff, transparent); border-radius: 2px; margin-bottom: 16px; }
+  .header p { color: var(--text2); font-size: .9rem; letter-spacing: 1px; text-transform: uppercase; }
+  @media (max-width: 600px) { .header h1 { font-size: 1.7rem; } }
+  .header-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 18px 0 14px; }
+  .info-btn, .contact-btn, .qday-info-btn, .lang-btn, .bolha-btn, .galaxia-btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; font-family: inherit; font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; background: rgba(21,26,36,.7); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-radius: 10px; cursor: pointer; transition: transform .2s; }
+  .info-btn { color: #58a6ff; border: 1px solid rgba(30,144,255,.5); }
+  .contact-btn { color: #2ea043; border: 1px solid rgba(46,160,67,.5); }
+  .qday-info-btn { color: #bc8cff; border: 1px solid rgba(188,140,255,.5); }
+  .lang-btn { color: #ffb347; border: 1px solid rgba(255,179,71,.5); }
+  .bolha-btn { color: #00d9ff; border: 1px solid rgba(0,217,255,.5); }
+  .galaxia-btn { color: #c084fc; border: 1px solid rgba(192,132,252,.5); }
+  .bolha-title { font-size: 2.4rem; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; background: linear-gradient(135deg, #00d9ff, #58a6ff 50%, #bc8cff); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .galaxia-title { font-size: 2.6rem; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; background: linear-gradient(135deg, #c084fc, #8b5cf6 30%, #58a6ff); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .bolha-back-wrap, .galaxia-back-wrap { display: flex; justify-content: center; margin-bottom: 20px; }
+  .bolha-back-btn, .galaxia-back-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; font-family: inherit; font-size: .85rem; font-weight: 700; background: rgba(21,26,36,.8); border-radius: 10px; cursor: pointer; }
+  .bolha-back-btn { color: #00d9ff; border: 1px solid rgba(0,217,255,.5); }
+  .galaxia-back-btn { color: #c084fc; border: 1px solid rgba(192,132,252,.5); }
+  .bolha-legend, .galaxia-legend { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; font-size: .75rem; color: var(--text2); }
+  .bolha-legend-item, .galaxia-legend-item { display: flex; align-items: center; gap: 6px; }
+  .bolha-legend-dot, .galaxia-legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .bolha-legend-dot.green { background: #2ea043; }
+  .bolha-legend-dot.red { background: #da3633; }
+  .bolha-legend-dot.gray { background: #8b949e; }
+  .galaxia-legend-dot.sun { background: radial-gradient(circle, #fff, #ffd700, #ff8c00); }
+  .galaxia-legend-dot.giant { background: radial-gradient(circle, #ff9a3c, #ff4500); }
+  .galaxia-legend-dot.planet { background: radial-gradient(circle, #58a6ff, #1e40af); }
+  .galaxia-legend-dot.moon { background: radial-gradient(circle, #bc8cff, #6d28d9); }
+  .bolha-container { position: relative; width: 100%; max-width: 1200px; height: 70vh; min-height: 520px; background: radial-gradient(circle at 50% 50%, rgba(0,217,255,.05), transparent 70%); border: 1px solid rgba(0,217,255,.2); border-radius: 20px; overflow: hidden; }
+  .bolha-item { position: absolute; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; text-align: center; padding: 6px; overflow: hidden; user-select: none; will-change: transform; }
+  .bolha-item.buyer { background: radial-gradient(circle at 35% 30%, rgba(100,255,150,.9), rgba(46,160,67,.75) 40%, rgba(13,60,30,.9)); color: #56d364; border: 2px solid rgba(86,211,100,.7); }
+  .bolha-item.seller { background: radial-gradient(circle at 35% 30%, rgba(255,130,130,.9), rgba(218,54,51,.75) 40%, rgba(60,13,13,.9)); color: #ff6b6b; border: 2px solid rgba(255,107,107,.7); }
+  .bolha-item.neutral { background: radial-gradient(circle at 35% 30%, rgba(180,190,200,.7), rgba(139,148,158,.6) 40%, rgba(28,35,48,.9)); color: #b0b8c0; border: 2px solid rgba(176,184,192,.5); }
+  .bolha-logo { width: 38%; height: 38%; max-width: 48px; max-height: 48px; border-radius: 50%; object-fit: contain; margin-bottom: 4px; pointer-events: none; }
+  .bolha-name { font-size: .7rem; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 95%; pointer-events: none; }
+  .bolha-symbol { font-size: .58rem; font-weight: 700; color: rgba(255,255,255,.8); text-transform: uppercase; pointer-events: none; }
+  .bolha-item.tiny .bolha-name, .bolha-item.tiny .bolha-symbol { display: none; }
+  .bolha-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text2); }
+  .galaxia-container { position: relative; width: 100%; max-width: 1300px; height: 82vh; min-height: 620px; background: radial-gradient(ellipse at 50% 50%, rgba(30,20,60,.6), rgba(5,3,15,.98) 80%); border: 1px solid rgba(192,132,252,.3); border-radius: 20px; overflow: hidden; }
+  .galaxia-sun { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 3; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; }
+  .galaxia-sun-core { width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff 0%, #fff3a0 15%, #ffd700 35%, #ff9800 60%, #ff5722 85%, #b71c1c 100%); box-shadow: 0 0 40px 10px rgba(255,200,60,.95); display: flex; align-items: center; justify-content: center; }
+  .galaxia-sun-logo { width: 55%; height: 55%; border-radius: 50%; object-fit: contain; }
+  .galaxia-sun-label { position: absolute; top: calc(100% + 12px); left: 50%; transform: translateX(-50%); padding: 5px 16px; border-radius: 20px; background: linear-gradient(135deg, rgba(255,200,60,.3), rgba(255,140,0,.25)); border: 1.5px solid rgba(255,200,60,.9); color: #fff8d0; font-size: .85rem; font-weight: 900; white-space: nowrap; pointer-events: none; }
+  .galaxia-orbit { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); border-radius: 50%; border: 1px dashed rgba(192,132,252,.2); pointer-events: none; z-index: 1; }
+  .galaxia-body { position: absolute; border-radius: 50%; cursor: pointer; z-index: 5; display: flex; align-items: center; justify-content: center; will-change: transform; }
+  .galaxia-body.giant { background: radial-gradient(circle at 35% 30%, #ffedd5, #f97316 75%, #c2410c); color: #fdba74; }
+  .galaxia-body.planet { background: radial-gradient(circle at 35% 30%, #dbeafe, #3b82f6 55%, #1e3a8a); color: #93c5fd; }
+  .galaxia-body.moon { background: radial-gradient(circle at 35% 30%, #ede9fe, #a78bfa 55%, #5b21b6); color: #c4b5fd; }
+  .galaxia-body .galaxia-logo { width: 55%; height: 55%; border-radius: 50%; object-fit: contain; }
+  .galaxia-body .galaxia-label { position: absolute; top: calc(100% + 5px); left: 50%; transform: translateX(-50%); padding: 2px 8px; border-radius: 10px; background: rgba(11,14,20,.92); border: 1px solid currentColor; color: #e9d5ff; font-size: .58rem; font-weight: 800; white-space: nowrap; pointer-events: none; opacity: 0; }
+  .galaxia-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text2); z-index: 5; }
+  .filter-wrapper { width: 100%; max-width: 1200px; margin-bottom: 22px; }
+  .filter-bar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: rgba(21,26,36,.7); border: 1px solid var(--border); border-radius: 10px; }
+  .filter-input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-family: inherit; font-size: .88rem; padding: 4px 0; }
+  .filter-input::placeholder { color: var(--text2); opacity: .7; }
+  .filter-clear { width: 24px; height: 24px; border-radius: 6px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: var(--text2); cursor: pointer; display: none; align-items: center; justify-content: center; }
+  .filter-clear.visible { display: flex; }
+  .filter-count { font-size: .7rem; font-weight: 700; text-transform: uppercase; color: var(--text2); }
+  .filter-empty { text-align: center; padding: 40px 20px; color: var(--text2); grid-column: 1 / -1; }
+  .featured, .oldest-section { width: 100%; max-width: 1200px; margin-bottom: 32px; display: none; }
+  .featured.visible, .oldest-section.visible { display: block; }
+  .featured-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 14px; }
+  .oldest-title { display: flex; align-items: center; gap: 8px; font-size: 1.05rem; font-weight: 700; margin-bottom: 14px; color: #ffb347; }
+  .featured-grid, .oldest-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .oldest-card { background: rgba(21,26,36,.65); border: 2px solid rgba(255,179,71,.35); border-radius: 12px; padding: 18px; padding-top: 44px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; position: relative; overflow: hidden; }
+  .oldest-badge { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 12px; background: linear-gradient(135deg, rgba(255,179,71,.25), rgba(255,140,0,.15)); border-bottom: 1px solid rgba(255,179,71,.4); font-size: .62rem; font-weight: 800; text-transform: uppercase; color: #ffd9a0; }
+  .oldest-year-badge { position: absolute; top: 8px; right: 10px; background: linear-gradient(135deg, #ffb347, #ff8c00); color: #1a1200; font-size: .6rem; font-weight: 900; padding: 2px 8px; border-radius: 20px; z-index: 3; }
+  .card, .featured-card { background: rgba(21,26,36,.65); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; position: relative; overflow: hidden; transition: background .2s, transform .2s; }
+  .card:hover, .featured-card:hover { background: rgba(28,35,48,.85); transform: translateY(-4px); }
+  .featured-card { border-width: 2px; }
+  .featured-card.rank-1 { background: rgba(42,36,21,.75); border-color: #ffd700; }
+  .featured-card.rank-2 { background: rgba(38,41,48,.75); border-color: #c0c0c0; }
+  .featured-card.rank-3 { background: rgba(44,31,22,.75); border-color: #cd7f32; }
+  .rank-badge { position: absolute; top: 0; right: 0; padding: 4px 10px; font-size: .7rem; font-weight: 800; border-bottom-left-radius: 10px; z-index: 2; background: linear-gradient(135deg, #ffe680, #ffd700); color: #1a1200; }
+  .card.most-viewed { border-color: #1e90ff; padding-top: 42px; }
+  .view-badge { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #1e90ff, #00bfff); color: #fff; font-size: .55rem; font-weight: 800; padding: 3px 10px; border-radius: 20px; text-transform: uppercase; z-index: 3; }
+  .coin-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .coin-tag { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 5px; font-size: .55rem; font-weight: 800; text-transform: uppercase; }
+  .coin-tag.pqc { background: rgba(46,160,67,.18); color: #3fb950; border: 1px solid rgba(46,160,67,.5); }
+  .coin-tag.privacy { background: rgba(188,140,255,.15); color: #bc8cff; border: 1px solid rgba(188,140,255,.5); }
+  .coin-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .coin-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .coin-logo { width: 36px; height: 36px; border-radius: 50%; object-fit: contain; background: var(--bg); border: 1px solid var(--border); flex-shrink: 0; }
+  .featured-card .coin-logo, .oldest-card .coin-logo { width: 42px; height: 42px; }
+  .coin-name { display: flex; flex-direction: column; min-width: 0; }
+  .coin-name .name { font-weight: 600; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .coin-name .symbol { font-size: .72rem; color: var(--text2); text-transform: uppercase; }
+  .coin-price { text-align: right; font-weight: 700; font-size: 1rem; flex-shrink: 0; }
+  .vol-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; font-size: .82rem; gap: 10px; }
+  .vol-row.buyer { background: rgba(13,40,24,.8); border: 1px solid rgba(46,160,67,.3); }
+  .vol-row.seller { background: rgba(45,15,15,.8); border: 1px solid rgba(218,54,51,.3); }
+  .vol-row.neutral { background: rgba(28,35,48,.8); border: 1px solid var(--border); }
+  .vol-left { display: flex; align-items: center; gap: 8px; }
+  .vol-label { font-size: .62rem; text-transform: uppercase; color: var(--text2); }
+  .vol-value { font-weight: 700; font-size: .9rem; }
+  .vol-right { font-weight: 700; font-size: .72rem; text-transform: uppercase; }
+  .vol-row.buyer .vol-right { color: var(--green); }
+  .vol-row.seller .vol-right { color: var(--red); }
+  .vol-row.neutral .vol-right { color: var(--neutral); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; width: 100%; max-width: 1200px; }
+  .loading, .error { text-align: center; padding: 50px 20px; color: var(--text2); grid-column: 1 / -1; }
+  .error { color: var(--red); }
+  .spinner { display: inline-block; width: 22px; height: 22px; border: 3px solid var(--border); border-top-color: #58a6ff; border-radius: 50%; animation: spin .8s linear infinite; margin-bottom: 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .detail { width: 100%; max-width: 640px; display: none; }
+  .detail.visible { display: block; }
+  .back-btn { background: rgba(21,26,36,.8); color: var(--text); border: 1px solid var(--border); padding: 8px 14px; border-radius: 8px; font-size: .82rem; font-weight: 600; cursor: pointer; margin-bottom: 14px; font-family: inherit; }
+  .detail-header { display: flex; align-items: center; gap: 12px; padding: 14px; background: rgba(21,26,36,.8); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; }
+  .detail-logo { width: 44px; height: 44px; border-radius: 50%; object-fit: contain; flex-shrink: 0; }
+  .detail-header-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .detail-title-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .detail-name { font-size: 1rem; font-weight: 700; }
+  .detail-symbol { font-size: .65rem; color: var(--text2); text-transform: uppercase; padding: 1px 6px; background: rgba(255,255,255,.05); border-radius: 4px; }
+  .detail-price { font-weight: 700; }
+  .detail-status { display: inline-flex; align-items: center; gap: 4px; font-size: .6rem; font-weight: 700; text-transform: uppercase; padding: 2px 8px; border-radius: 5px; width: fit-content; }
+  .detail-status.buyer { color: var(--green); background: var(--green-bg); }
+  .detail-status.seller { color: var(--red); background: var(--red-bg); }
+  .detail-status.neutral { color: var(--neutral); background: var(--neutral-bg); }
+  .stats { width: 100%; background: rgba(21,26,36,.8); border: 1px solid var(--border); border-radius: 10px; border-collapse: separate; border-spacing: 0; overflow: hidden; font-size: .8rem; }
+  .stats tr:not(:last-child) td { border-bottom: 1px solid var(--border); }
+  .stats td { padding: 8px 12px; }
+  .stats .lbl { color: var(--text2); font-size: .7rem; font-weight: 600; text-transform: uppercase; width: 50%; }
+  .stats .val { text-align: right; font-weight: 700; }
+  .stats .sub { font-size: .66rem; color: var(--text2); font-weight: 500; margin-top: 1px; }
+  .coingecko-link { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; padding: 14px 16px; background: rgba(30,144,255,.12); border: 1px solid rgba(30,144,255,.4); border-radius: 10px; color: var(--text); text-decoration: none; font-size: .82rem; }
+  .coingecko-link-left { display: flex; align-items: center; gap: 10px; }
+  .coingecko-icon { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #1e90ff, #00bfff); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .coingecko-label { font-size: .6rem; font-weight: 700; text-transform: uppercase; color: #58a6ff; }
+  .coingecko-name { font-weight: 700; font-size: .9rem; }
+  .coingecko-arrow { font-size: 1rem; color: #58a6ff; }
+  .modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(3,3,8,.75); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; visibility: hidden; transition: opacity .25s; }
+  .modal-backdrop.open { opacity: 1; visibility: visible; }
+  .modal { width: 100%; max-width: 680px; max-height: 85vh; background: linear-gradient(160deg, rgba(21,26,36,.98), rgba(11,14,20,.98)); border: 1px solid rgba(88,166,255,.4); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px 14px; border-bottom: 1px solid rgba(255,255,255,.08); }
+  .modal-title { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; font-weight: 800; }
+  .modal-close { width: 34px; height: 34px; border-radius: 8px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: var(--text2); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .modal-body { padding: 20px 22px 24px; overflow-y: auto; font-size: .9rem; line-height: 1.65; }
+  .lang-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .lang-option { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 10px; border-radius: 12px; cursor: pointer; font-family: inherit; background: rgba(21,26,36,.7); border: 2px solid var(--border); color: var(--text); font-weight: 700; }
+  .lang-option.active { border-color: #ffb347; background: rgba(255,179,71,.15); }
+  .lang-flag { font-size: 1.9rem; }
+  .lang-check { display: none; width: 22px; height: 22px; border-radius: 50%; background: #ffb347; color: #1a1200; font-size: .75rem; align-items: center; justify-content: center; }
+  .lang-option.active .lang-check { display: flex; }
+  .modal-section { margin-bottom: 22px; }
+  .modal-section h3 { font-size: .95rem; font-weight: 800; margin-bottom: 8px; color: #58a6ff; text-transform: uppercase; }
+  .modal-callout { background: rgba(255,69,0,.1); border: 1px solid rgba(255,140,0,.4); border-left: 4px solid #ff8c00; border-radius: 8px; padding: 12px 14px; margin: 12px 0; color: #ffcb8a; }
+  .contact-card { background: rgba(46,160,67,.1); border: 1px solid rgba(46,160,67,.35); border-radius: 14px; padding: 24px; margin-bottom: 18px; text-align: center; }
+  .contact-avatar { width: 72px; height: 72px; margin: 0 auto 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #2ea043, #3fb950); font-size: 2rem; }
+  .contact-name { font-size: 1.05rem; font-weight: 800; margin-bottom: 4px; }
+  .contact-role { font-size: .7rem; text-transform: uppercase; color: #3fb950; font-weight: 700; margin-bottom: 16px; }
+  .contact-email-box { display: inline-flex; align-items: center; gap: 10px; padding: 12px 18px; background: rgba(11,14,20,.7); border: 1px solid rgba(46,160,67,.4); border-radius: 10px; text-decoration: none; color: var(--text); font-weight: 700; }
+  .contact-note { text-align: center; font-size: .78rem; color: var(--text2); line-height: 1.6; }
+  @media (max-width: 900px) { .featured-grid, .oldest-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) { .header h1 { font-size: 2rem; } .grid { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; } }
+
+  .paywall-screen { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; background: rgba(3,3,8,.92); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  .paywall-screen.show { display: flex; }
+  .paywall-card { width: 100%; max-width: 560px; background: linear-gradient(160deg, rgba(21,26,36,.98), rgba(11,14,20,.98)); border: 1.5px solid rgba(255,215,0,.5); border-radius: 20px; box-shadow: 0 0 80px rgba(255,215,0,.25); padding: 32px 28px; position: relative; overflow: hidden; text-align: center; }
+  .paywall-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #ffd700, #ffb347, #ff8c00, #ffd700); background-size: 200% auto; animation: gradientShift 4s linear infinite; }
+  .paywall-icon { font-size: 3.2rem; margin-bottom: 12px; }
+  .paywall-title { font-size: 1.8rem; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; background: linear-gradient(135deg, #ffd700, #ffb347 50%, #ff8c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 6px; }
+  .paywall-subtitle { color: var(--text2); font-size: .85rem; margin-bottom: 22px; }
+  .paywall-info-box { background: rgba(21,26,36,.7); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin: 20px 0 14px; text-align: left; }
+  .paywall-info-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; font-size: .8rem; }
+  .paywall-info-row:not(:last-child) { border-bottom: 1px dashed rgba(255,255,255,.06); }
+  .paywall-info-row span:first-child { color: var(--text2); font-size: .7rem; text-transform: uppercase; }
+  .paywall-info-row strong { color: var(--text); font-weight: 700; }
+  .paywall-status { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; margin-bottom: 16px; background: rgba(30,144,255,.08); border: 1px solid rgba(30,144,255,.3); font-size: .82rem; color: #9ecbff; line-height: 1.5; text-align: left; }
+  .paywall-status.ok { background: rgba(46,160,67,.1); border-color: rgba(46,160,67,.4); color: #7ee787; }
+  .paywall-status.err { background: rgba(218,54,51,.1); border-color: rgba(218,54,51,.4); color: #ff9492; }
+  .paywall-status.wait { background: rgba(255,179,71,.1); border-color: rgba(255,179,71,.4); color: #ffd9a0; }
+  .paywall-status-icon { font-size: 1rem; flex-shrink: 0; }
+  .paywall-actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .paywall-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 18px; border-radius: 12px; font-family: inherit; font-size: .88rem; font-weight: 800; cursor: pointer; border: 1.5px solid; transition: transform .2s, box-shadow .2s; text-transform: uppercase; letter-spacing: .5px; }
+  .paywall-btn.pay { background: linear-gradient(135deg, rgba(46,160,67,.25), rgba(63,185,80,.15)); color: #3fb950; border-color: rgba(46,160,67,.6); }
+  .paywall-btn.pay:hover:not(:disabled) { transform: translateY(-2px); border-color: #3fb950; box-shadow: 0 0 22px rgba(46,160,67,.7); }
+  .paywall-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .paywall-btn.back { background: rgba(21,26,36,.7); color: var(--text2); border-color: var(--border); font-size: .75rem; padding: 10px; }
+  .paywall-disclaimer { margin-top: 16px; font-size: .7rem; color: var(--text2); line-height: 1.6; }
+  .paywall-disclaimer strong { color: #ffb347; }
+  .wallet-grid { display: flex; flex-direction: column; gap: 10px; margin: 20px 0; }
+  .wallet-btn { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px; padding: 14px 20px; border-radius: 12px; background: rgba(21,26,36,.7); border: 1.5px solid var(--border); color: var(--text); font-family: inherit; font-size: .9rem; font-weight: 700; cursor: pointer; transition: transform .2s; position: relative; width: 100%; }
+  .wallet-btn:hover:not(:disabled) { transform: translateY(-2px); border-color: #ffd700; box-shadow: 0 0 18px rgba(255,215,0,.3); }
+  .wallet-btn:disabled { opacity: .6; cursor: wait; }
+  .wallet-btn .wallet-ico { font-size: 1.6rem; line-height: 1; }
+  .wallet-btn .wallet-name { flex: 1; text-align: left; }
+  .wallet-btn .wallet-detected { position: absolute; top: 50%; right: 16px; transform: translateY(-50%); font-size: .6rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: rgba(46,160,67,.2); color: #3fb950; border: 1px solid rgba(46,160,67,.5); text-transform: uppercase; }
+  .wallet-btn.not-detected { opacity: .5; }
+  .gas-info { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; margin-top: 10px; background: rgba(255,179,71,.08); border: 1px solid rgba(255,179,71,.25); border-radius: 8px; font-size: .75rem; color: #ffd9a0; }
+  .gas-info strong { color: #ffb347; text-align: right; font-size: 0.8rem; }
+  
+  .net-selector { display: flex; gap: 8px; margin-bottom: 20px; background: rgba(21,26,36,.5); padding: 6px; border-radius: 12px; border: 1px solid var(--border); }
+  .net-btn { flex: 1; padding: 8px 10px; border-radius: 8px; font-family: inherit; font-size: 0.75rem; font-weight: 800; cursor: pointer; border: 1px solid transparent; background: transparent; color: var(--text2); transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .net-btn:hover { background: rgba(255,255,255,0.05); }
+  .net-btn.active { background: rgba(255,255,255,0.1); color: var(--text); border-color: rgba(255,255,255,0.2); }
+  .net-warning { display: none; color: #ffd9a0; font-size: 0.75rem; margin-bottom: 15px; padding: 10px; background: rgba(255,179,71,.1); border: 1px solid rgba(255,179,71,.3); border-radius: 8px; text-align: center; }
+
+  @media (max-width: 480px) { .paywall-card { padding: 24px 18px; } .paywall-title { font-size: 1.4rem; } .wallet-btn { padding: 12px 16px; font-size: .82rem; } }
+</style>
+</head>
+<body>
+
+<div id="small-stars-container"></div>
+
+<div id="paywallScreen" class="paywall-screen show" role="dialog" aria-modal="true">
+  <div class="paywall-card">
+    <div id="walletSelectScreen">
+      <div class="paywall-icon">🔐</div>
+      <h1 class="paywall-title" id="pwTitle">Acesso Restrito</h1>
+      <p class="paywall-subtitle" id="pwSubtitle">Escolha sua rede e carteira para continuar</p>
+
+      <div class="net-selector">
+        <button class="net-btn active" data-net="bnb" type="button">🟡 BNB</button>
+        <button class="net-btn" data-net="eth" type="button">🔵 ETH</button>
+        <button class="net-btn" data-net="sol" type="button">🟣 SOL</button>
+      </div>
+
+      <div id="netWarning" class="net-warning">
+        ⚠️ O pagamento será processado exclusivamente na rede <strong>BNB Smart Chain</strong>.
+      </div>
+
+      <div class="wallet-grid" id="walletGrid">
+        <button class="wallet-btn" data-wallet="trust" type="button"><span class="wallet-ico">🛡️</span><span class="wallet-name">Trust Wallet</span><span class="wallet-detected" style="display:none">✓</span></button>
+        <button class="wallet-btn" data-wallet="binance" type="button"><span class="wallet-ico">🟡</span><span class="wallet-name">Binance Wallet</span><span class="wallet-detected" style="display:none">✓</span></button>
+        <button class="wallet-btn" data-wallet="metamask" type="button"><span class="wallet-ico">🦊</span><span class="wallet-name">MetaMask</span><span class="wallet-detected" style="display:none">✓</span></button>
+      </div>
+
+      <div class="paywall-status" id="paywallStatus">
+        <span class="paywall-status-icon">💡</span>
+        <span id="paywallStatusText">Selecione sua carteira para continuar.</span>
+      </div>
+
+      <p class="paywall-disclaimer" id="pwDisclaimer">
+        <strong>⚠️ Cobrança por sessão:</strong> ao desconectar ou fechar a carteira, será necessário pagar novamente na próxima entrada.
+      </p>
+    </div>
+
+    <div id="payScreen" style="display:none">
+      <div class="paywall-icon">💳</div>
+      <h1 class="paywall-title" id="payTitle">Pagar Taxa</h1>
+      <p class="paywall-subtitle" id="paySubtitle">Confirme o pagamento na sua carteira</p>
+
+      <div class="paywall-info-box">
+        <div class="paywall-info-row"><span id="lblWallet">Carteira</span><strong id="payWallet">—</strong></div>
+        <div class="paywall-info-row"><span id="lblNetwork">Rede</span><strong id="payNetwork">Verificando…</strong></div>
+        <div class="paywall-info-row"><span id="lblChainId">Chain ID</span><strong id="payChainId">—</strong></div>
+        <div class="paywall-info-row"><span id="lblContract">Contrato</span><strong id="payContract">—</strong></div>
+        <div class="paywall-info-row"><span id="lblAmount">Valor (Taxa)</span><strong id="payEstimate">calculando…</strong></div>
+        <div class="paywall-info-row"><span id="lblType">Tipo</span><strong id="lblTypeVal">Por sessão</strong></div>
+      </div>
+
+      <div class="gas-info">
+        <span id="lblGas">⛽ Gas da rede (pago à parte)</span>
+        <strong id="gasEstimate">calculando…</strong>
+      </div>
+
+      <div class="paywall-status" id="payStatus">
+        <span class="paywall-status-icon">💡</span>
+        <span id="payStatusText">Pague para liberar o acesso.</span>
+      </div>
+
+      <button class="paywall-btn back" id="forceNetworkBtn" type="button" style="display:none; color: #ffd700; border-color: #ffd700; margin-bottom: 10px;"><span>🔄</span><span>Forçar Rede BNB</span></button>
+
+      <div class="paywall-actions">
+        <button class="paywall-btn pay" id="payBtn" type="button" disabled><span>💸</span><span id="payBtnText">Pagar $0,20 em BNB</span></button>
+        <button class="paywall-btn back" id="backToWalletsBtn" type="button"><span>←</span><span id="backBtnText">Trocar carteira</span></button>
+      </div>
+    </div>
+
+    <div id="confirmScreen" style="display:none;text-align:center;padding:40px 20px">
+      <div class="spinner" style="width:44px;height:44px;border-width:4px;margin-bottom:22px"></div>
+      <h1 class="paywall-title" id="confirmTitle" style="font-size:1.4rem">Confirmando…</h1>
+      <p class="paywall-subtitle" id="confirmSubtitle">Aguardando a blockchain confirmar o pagamento</p>
+      <p id="confirmTxHash" style="font-size:.72rem;color:#8b949e;font-family:monospace;margin-top:14px;word-break:break-all"></p>
+      <a id="confirmBscScan" href="#" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:14px;padding:8px 14px;background:rgba(30,144,255,.15);color:#58a6ff;border:1px solid rgba(30,144,255,.4);border-radius:8px;text-decoration:none;font-size:.75rem">BscScan ↗</a>
+    </div>
+  </div>
+</div>
+
+<div id="qdayView" style="display:none;">
+  <header class="header">
+    <div class="header-title-wrap"><h1 id="appTitle">Termômetro Q-Day</h1></div>
+    <div class="header-title-accent"></div>
+    <div class="header-actions">
+      <button class="info-btn" id="infoBtn" type="button"><span>ℹ️</span><span id="btnInfoText">Informação</span></button>
+      <button class="qday-info-btn" id="qdayInfoBtn" type="button"><span>⚛️</span><span id="btnQdayText">Q-Day</span></button>
+      <button class="contact-btn" id="contactBtn" type="button"><span>✉️</span><span id="btnContactText">Contato</span></button>
+      <button class="lang-btn" id="langBtn" type="button"><span>🌐</span><span id="btnLangText">Idioma</span></button>
+      <button class="bolha-btn" id="bolhaBtn" type="button"><span>🫧</span><span id="btnBolhaText">Bolha</span></button>
+      <button class="galaxia-btn" id="galaxiaBtn" type="button"><span>🌌</span><span id="btnGalaxiaText">Galáxia</span></button>
+    </div>
+    <p id="appSubtitle">Setor Quantum-Resistant · CoinGecko</p>
+    <p style="margin-top:6px;font-size:.78rem" id="lastUpdate">Carregando...</p>
+  </header>
+
+  <div class="filter-wrapper">
+    <div class="filter-bar">
+      <span>🔍</span>
+      <input type="search" id="filterInput" class="filter-input" placeholder="Filtrar por nome ou símbolo..." autocomplete="off">
+      <button class="filter-clear" id="filterClear" type="button">✕</button>
+      <span class="filter-count" id="filterCount"></span>
+    </div>
+  </div>
+
+  <section class="featured" id="featured"><h2 class="featured-title" id="featuredTitle">🏆 Top 3 · Maior Volume 24h</h2><div class="featured-grid" id="featuredGrid"></div></section>
+  <section class="oldest-section" id="oldestSection"><h2 class="oldest-title"><span>🏛️</span> <span id="oldestTitleText">As 3 Moedas Mais Antigas do Setor</span></h2><div class="oldest-grid" id="oldestGrid"></div></section>
+  <main class="grid" id="grid"><div class="loading"><div class="spinner"></div><div id="loadingText">Buscando moedas...</div></div></main>
+</div>
+
+<div id="bolhaView" style="display:none;">
+  <header class="header">
+    <div class="header-title-wrap"><h1 class="bolha-title" id="bolhaTitleText">Bolhas</h1></div>
+    <div class="bolha-back-wrap"><button class="bolha-back-btn" id="backToQdayBtn" type="button"><span>←</span><span id="bolhaBackText">Voltar</span></button></div>
+    <p id="bolhaSubtitle">Cada moeda é uma bolha</p>
+    <div class="bolha-legend">
+      <span class="bolha-legend-item"><span class="bolha-legend-dot green"></span><span id="bolhaLegBuyer">Comprador</span></span>
+      <span class="bolha-legend-item"><span class="bolha-legend-dot red"></span><span id="bolhaLegSeller">Vendedor</span></span>
+      <span class="bolha-legend-item"><span class="bolha-legend-dot gray"></span><span id="bolhaLegNeutral">Neutro</span></span>
+    </div>
+  </header>
+  <div class="bolha-container" id="bolhaContainer"><div class="bolha-empty"><div class="spinner"></div><div>Carregando...</div></div></div>
+</div>
+
+<div id="galaxiaView" style="display:none;">
+  <header class="header">
+    <div class="header-title-wrap"><h1 class="galaxia-title" id="galaxiaTitleText">Galáxia</h1></div>
+    <div class="galaxia-back-wrap"><button class="galaxia-back-btn" id="backFromGalaxiaBtn" type="button"><span>←</span><span id="galaxiaBackText">Voltar</span></button></div>
+    <p id="galaxiaSubtitle">Cada moeda orbita o Sol</p>
+    <div class="galaxia-legend">
+      <span class="galaxia-legend-item"><span class="galaxia-legend-dot sun"></span><span id="galaxiaLegSun">Sol</span></span>
+      <span class="galaxia-legend-item"><span class="galaxia-legend-dot giant"></span><span id="galaxiaLegGiant">Gigante</span></span>
+      <span class="galaxia-legend-item"><span class="galaxia-legend-dot planet"></span><span id="galaxiaLegPlanet">Planeta</span></span>
+      <span class="galaxia-legend-item"><span class="galaxia-legend-dot moon"></span><span id="galaxiaLegMoon">Lua</span></span>
+    </div>
+  </header>
+  <div class="galaxia-container" id="galaxiaContainer"><div class="galaxia-empty"><div class="spinner"></div><div>Formando...</div></div></div>
+</div>
+
+<div class="detail" id="detailView"><button class="back-btn" id="backBtn" type="button">← Voltar</button><div id="detailContent"></div></div>
+
+<div class="modal-backdrop" id="infoModal" role="dialog"><div class="modal"><div class="modal-header"><div class="modal-title"><span>🌡</span><span id="infoTitle">Entenda o Q-Day</span></div><button class="modal-close" id="infoModalClose">✕</button></div><div class="modal-body" id="infoModalBody"></div></div></div>
+<div class="modal-backdrop" id="qdayInfoModal" role="dialog"><div class="modal"><div class="modal-header"><div class="modal-title"><span>⚛️</span><span id="qdayTitle">Q-Day</span></div><button class="modal-close" id="qdayInfoModalClose">✕</button></div><div class="modal-body" id="qdayInfoModalBody"></div></div></div>
+<div class="modal-backdrop" id="contactModal" role="dialog"><div class="modal"><div class="modal-header"><div class="modal-title"><span>✉️</span><span id="contactTitle">Contato</span></div><button class="modal-close" id="contactModalClose">✕</button></div><div class="modal-body"><div class="contact-card"><div class="contact-avatar">👤</div><div class="contact-name">Maycon</div><div class="contact-role" id="contactRole">Desenvolvedor</div><a class="contact-email-box" href="mailto:mayconard2018@gmail.com"><span>📧</span><span>mayconard2018@gmail.com</span></a></div><div class="contact-note"><strong>Termômetro Q-Day</strong><br><span id="contactNote">Entre em contato.</span></div></div></div></div>
+<div class="modal-backdrop" id="langModal" role="dialog"><div class="modal"><div class="modal-header"><div class="modal-title"><span>🌐</span><span id="langTitle">Idioma</span></div><button class="modal-close" id="langModalClose">✕</button></div><div class="modal-body"><div class="lang-options" id="langOptions"><button class="lang-option" data-lang="pt"><span class="lang-flag">🇧🇷</span><span>PT-BR</span><span class="lang-check">✓</span></button><button class="lang-option" data-lang="en"><span class="lang-flag">🇺🇸</span><span>EN</span><span class="lang-check">✓</span></button><button class="lang-option" data-lang="es"><span class="lang-flag">🇪🇸</span><span>ES</span><span class="lang-check">✓</span></button><button class="lang-option" data-lang="pt-PT"><span class="lang-flag">🇵🇹</span><span>PT-PT</span><span class="lang-check">✓</span></button></div></div></div></div>
+
+<script>
+/* ============================================================
+   CONFIG (PLANO B - FALLBACK)
+   Deixando '0x' o código envia o BNB diretamente para FEE_RECEIVER
+   ============================================================ */
+const CONTRACT_ADDRESS = '0x'; 
+const CONTRACT_ABI = []; // Não utilizado no Plano B
+const FEE_RECEIVER = '0x31aDE282e15085948b8fa07192F12EfF364de0a9';
+const FEE_USD = 0.20;
+const BSC_CHAIN_ID = 56;
+const BSC_HEX = '0x38';
+const BSC_CFG = {
+  chainId: BSC_HEX,
+  chainName: 'BNB Smart Chain',
+  nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+  rpcUrls: ['https://bsc-dataseed.binance.org/', 'https://bsc-dataseed1.binance.org/'],
+  blockExplorerUrls: ['https://bscscan.com']
+};
+const API = 'https://api.coingecko.com/api/v3';
+const CAT = 'quantum-resistant';
+const REFRESH_MS = 60000;
+const CACHE_KEY = 'qday_cache_v52';
+const CACHE_TTL = 60000;
+
+const YEARS = { 'quantum-resistant-ledger': 2018, 'zcash': 2016, 'algorand': 2019, 'starknet': 2024, 'qubic': 2022, 'qanplatform': 2021, 'nervos-network': 2019, 'naoris-protocol': 2024, 'abelian': 2023 };
+const TAGS = { 'quantum-resistant-ledger': { pqc: 1 }, 'zcash': { privacy: 1 }, 'algorand': { pqc: 1 }, 'starknet': { pqc: 1 }, 'qanplatform': { pqc: 1 }, 'abelian': { pqc: 1, privacy: 1 } };
+
+/* ============================================================
+   i18n
+   ============================================================ */
+const I18N = {
+  pt: {
+    appTitle: 'Termômetro Q-Day', subtitle: 'Setor Quantum-Resistant · CoinGecko', loading: 'Carregando...',
+    btnInfo: 'Informação', btnQday: 'Q-Day', btnContact: 'Contato', btnLang: 'Idioma', btnBolha: 'Bolha', btnGalaxia: 'Galáxia',
+    featuredTitle: '🏆 Top 3 · Maior Volume 24h', oldestTitle: 'As 3 Moedas Mais Antigas do Setor',
+    filterPH: 'Filtrar por nome ou símbolo...', loadingCoins: 'Buscando moedas...',
+    noCoins: 'Nenhuma moeda encontrada.', noMatch: 'Nenhuma moeda corresponde a',
+    buyer: 'Comprador', seller: 'Vendedor', neutral: 'Neutro',
+    vol24: 'Volume 24h', mostViewed: '🌍 Mais Vista',
+    launch: 'Lançamento', cap: 'Capitalização', supply: 'Supply', fdv: 'FDV', category: 'Categoria',
+    pqc: '🛡️ PQC', privacy: '🔒 Priv', coingecko: 'CoinGecko',
+    updated: 'Última atualização:', cache: '(cache)', of: 'de',
+    bolhaTitle: 'Bolhas', bolhaSubtitle: 'Cada moeda é uma bolha', bolhaBack: 'Voltar',
+    galaxiaTitle: 'Galáxia', galaxiaSubtitle: 'Cada moeda orbita o Sol', galaxiaBack: 'Voltar',
+    legSun: 'Sol', legGiant: 'Gigante', legPlanet: 'Planeta', legMoon: 'Lua',
+    infoTitle: 'Entenda o Q-Day', qdayTitle: 'Q-Day', contactTitle: 'Contato', langTitle: 'Idioma',
+    contactRole: 'Desenvolvedor', contactNote: 'Entre em contato.',
+    pwTitle: 'Acesso Restrito', pwSubtitle: 'Escolha sua rede e carteira para continuar',
+    pwDisclaimer: '⚠️ Cobrança por sessão: ao desconectar ou fechar a carteira, será necessário pagar novamente.',
+    payTitle: 'Pagar Taxa', paySubtitle: 'Confirme o pagamento na sua carteira',
+    lblWallet: 'Carteira', lblNetwork: 'Rede', lblChainId: 'Chain ID', lblContract: 'Contrato', lblAmount: 'Valor (Taxa)', lblType: 'Tipo',
+    lblTypeVal: 'Por sessão', lblGas: '⛽ Gas da rede (pago à parte)',
+    payBtn: 'Pagar $0,20 em BNB', backBtn: 'Trocar carteira',
+    confirming: 'Confirmando…', confirmSubtitle: 'Aguardando a blockchain confirmar o pagamento',
+    payStatusReady: 'Pague $0,20 em BNB para entrar.', payStatusWait: 'Processando…', payStatusOK: 'Confirmado!',
+    selectWalletPrompt: 'Selecione sua carteira para continuar.', walletNotDetected: 'não detectada.',
+    walletConnected: 'Conectado', walletCancel: 'Conexão cancelada pelo usuário.',
+    networkOK: '✓ BNB Smart Chain', networkErr: '✗ Rede incorreta', contractYes: 'Sim', contractFallback: 'Fallback (direto)',
+    calculating: 'calculando…', unavailable: 'indisponível', txCancel: 'Transação cancelada.', bnbInsufficient: 'BNB insuficiente na carteira.',
+    confirmReady: 'Pronto. Pague $0,20 em BNB para entrar.', walletChanged: 'Carteira alterada. Pague novamente para entrar.',
+    networkChanged: 'Rede alterada. Volte para BNB Smart Chain.', walletDisconnected: 'Carteira desconectada. Pague novamente.'
+  },
+  en: {
+    appTitle: 'Q-Day Thermometer', subtitle: 'Quantum-Resistant Sector · CoinGecko', loading: 'Loading...',
+    btnInfo: 'Info', btnQday: 'Q-Day', btnContact: 'Contact', btnLang: 'Language', btnBolha: 'Bubble', btnGalaxia: 'Galaxy',
+    featuredTitle: '🏆 Top 3 · Highest 24h Volume', oldestTitle: 'The 3 Oldest Coins in the Sector',
+    filterPH: 'Filter by name or symbol...', loadingCoins: 'Fetching coins...',
+    noCoins: 'No coins found.', noMatch: 'No coins match',
+    buyer: 'Buyer', seller: 'Seller', neutral: 'Neutral',
+    vol24: '24h Volume', mostViewed: '🌍 Most Viewed',
+    launch: 'Launch', cap: 'Market Cap', supply: 'Supply', fdv: 'FDV', category: 'Category',
+    pqc: '🛡️ PQC', privacy: '🔒 Privacy', coingecko: 'CoinGecko',
+    updated: 'Last update:', cache: '(cache)', of: 'of',
+    bolhaTitle: 'Bubbles', bolhaSubtitle: 'Each coin is a bubble', bolhaBack: 'Back',
+    galaxiaTitle: 'Galaxy', galaxiaSubtitle: 'Each coin orbits the Sun', galaxiaBack: 'Back',
+    legSun: 'Sun', legGiant: 'Giant', legPlanet: 'Planet', legMoon: 'Moon',
+    infoTitle: 'Understanding Q-Day', qdayTitle: 'Q-Day', contactTitle: 'Contact', langTitle: 'Language',
+    contactRole: 'Developer', contactNote: 'Get in touch.',
+    pwTitle: 'Restricted Access', pwSubtitle: 'Choose your network and wallet to continue',
+    pwDisclaimer: '⚠️ Per-session charge: disconnecting or closing the wallet requires a new payment.',
+    payTitle: 'Pay Fee', paySubtitle: 'Confirm payment in your wallet',
+    lblWallet: 'Wallet', lblNetwork: 'Network', lblChainId: 'Chain ID', lblContract: 'Contract', lblAmount: 'Amount (Fee)', lblType: 'Type',
+    lblTypeVal: 'Per session', lblGas: '⛽ Network gas (paid separately)',
+    payBtn: 'Pay $0.20 in BNB', backBtn: 'Change wallet',
+    confirming: 'Confirming…', confirmSubtitle: 'Waiting for blockchain confirmation',
+    payStatusReady: 'Pay $0.20 in BNB to enter.', payStatusWait: 'Processing…', payStatusOK: 'Confirmed!',
+    selectWalletPrompt: 'Select your wallet to continue.', walletNotDetected: 'not detected.',
+    walletConnected: 'Connected', walletCancel: 'Connection cancelled by user.',
+    networkOK: '✓ BNB Smart Chain', networkErr: '✗ Wrong network', contractYes: 'Yes', contractFallback: 'Fallback (direct)',
+    calculating: 'calculating…', unavailable: 'unavailable', txCancel: 'Transaction cancelled.', bnbInsufficient: 'Insufficient BNB.',
+    confirmReady: 'Ready. Pay $0.20 in BNB to enter.', walletChanged: 'Wallet changed. Pay again to enter.',
+    networkChanged: 'Network changed. Switch back to BNB Smart Chain.', walletDisconnected: 'Wallet disconnected. Pay again.'
+  },
+  es: {
+    appTitle: 'Termómetro Q-Day', subtitle: 'Sector Quantum-Resistant · CoinGecko', loading: 'Cargando...',
+    btnInfo: 'Info', btnQday: 'Q-Day', btnContact: 'Contacto', btnLang: 'Idioma', btnBolha: 'Burbuja', btnGalaxia: 'Galaxia',
+    featuredTitle: '🏆 Top 3 · Mayor Volumen 24h', oldestTitle: 'Las 3 Monedas Más Antiguas',
+    filterPH: 'Filtrar por nombre o símbolo...', loadingCoins: 'Buscando monedas...',
+    noCoins: 'No se encontraron monedas.', noMatch: 'Ninguna moneda coincide con',
+    buyer: 'Comprador', seller: 'Vendedor', neutral: 'Neutral',
+    vol24: 'Volumen 24h', mostViewed: '🌍 Más Vista',
+    launch: 'Lanzamiento', cap: 'Capitalización', supply: 'Suministro', fdv: 'FDV', category: 'Categoría',
+    pqc: '🛡️ PQC', privacy: '🔒 Priv', coingecko: 'CoinGecko',
+    updated: 'Última actualización:', cache: '(caché)', of: 'de',
+    bolhaTitle: 'Burbujas', bolhaSubtitle: 'Cada moneda es una burbuja', bolhaBack: 'Volver',
+    galaxiaTitle: 'Galaxia', galaxiaSubtitle: 'Cada moneda orbita el Sol', galaxiaBack: 'Volver',
+    legSun: 'Sol', legGiant: 'Gigante', legPlanet: 'Planeta', legMoon: 'Luna',
+    infoTitle: 'Entiende Q-Day', qdayTitle: 'Q-Day', contactTitle: 'Contacto', langTitle: 'Idioma',
+    contactRole: 'Desarrollador', contactNote: 'Contáctanos.',
+    pwTitle: 'Acceso Restringido', pwSubtitle: 'Elige tu red y cartera para continuar',
+    pwDisclaimer: '⚠️ Cargo por sesión: al desconectar o cerrar la cartera, deberás pagar de nuevo.',
+    payTitle: 'Pagar Tarifa', paySubtitle: 'Confirma el pago en tu cartera',
+    lblWallet: 'Cartera', lblNetwork: 'Red', lblChainId: 'Chain ID', lblContract: 'Contrato', lblAmount: 'Monto (Tarifa)', lblType: 'Tipo',
+    lblTypeVal: 'Por sesión', lblGas: '⛽ Gas de red (pagado aparte)',
+    payBtn: 'Pagar $0,20 en BNB', backBtn: 'Cambiar cartera',
+    confirming: 'Confirmando…', confirmSubtitle: 'Esperando la confirmación de la blockchain',
+    payStatusReady: 'Paga $0,20 en BNB para entrar.', payStatusWait: 'Procesando…', payStatusOK: '¡Confirmado!',
+    selectWalletPrompt: 'Selecciona tu cartera para continuar.', walletNotDetected: 'no detectada.',
+    walletConnected: 'Conectado', walletCancel: 'Conexión cancelada.',
+    networkOK: '✓ BNB Smart Chain', networkErr: '✗ Red incorrecta', contractYes: 'Sí', contractFallback: 'Fallback (directo)',
+    calculating: 'calculando…', unavailable: 'no disponible', txCancel: 'Transacción cancelada.', bnbInsufficient: 'BNB insuficiente.',
+    confirmReady: 'Listo. Paga $0,20 en BNB para entrar.', walletChanged: 'Cartera cambiada. Paga de nuevo.',
+    networkChanged: 'Red cambiada. Vuelve a BNB Smart Chain.', walletDisconnected: 'Cartera desconectada. Paga de nuevo.'
+  }
+};
+
+(function () {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const num = v => typeof v === 'number' && isFinite(v);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const shortAddr = a => a ? a.slice(0, 6) + '…' + a.slice(-4) : '—';
+
+  let currentLang = (() => { try { return localStorage.getItem('qday_lang') || 'pt'; } catch (_) { return 'pt'; } })();
+  if (!I18N[currentLang]) currentLang = 'pt';
+  const t = k => (I18N[currentLang] || I18N.pt)[k] || k;
+
+  const fmtPrice = p => { if (!num(p)) return '—'; const a = Math.abs(p); const d = a >= 1 ? 2 : a >= 0.01 ? 4 : a >= 0.0001 ? 6 : 8; try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: d }).format(p); } catch { return '—'; } };
+  const compact = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 2 });
+  const fullUsd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+  const supC = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 });
+  const fmtCompact = v => num(v) ? compact.format(v) : '—';
+  const fmtSup = (v, s) => !num(v) ? '—' : `${supC.format(v)} ${(s || '').toUpperCase()}`.trim();
+
+  const starC = $('small-stars-container');
+  if (starC) {
+    let h = '';
+    for (let i = 0; i < 100; i++) {
+      const s = Math.random() * 1.5 + 0.5, x = Math.random() * 100, y = Math.random() * 100, d = Math.random() * 4 + 2;
+      h += `<div class="small-star" style="width:${s}px;height:${s}px;left:${x}%;top:${y}%;animation-duration:${d}s;animation-delay:-${Math.random() * 5}s;"></div>`;
+    }
+    starC.innerHTML = h;
+  }
+
+  const qdayView = $('qdayView'), bolhaView = $('bolhaView'), galaxiaView = $('galaxiaView');
+  const detailView = $('detailView'), detailContent = $('detailContent');
+  const gridEl = $('grid'), featuredEl = $('featured'), featuredGrid = $('featuredGrid'), lastUpdate = $('lastUpdate');
+  const oldestSection = $('oldestSection'), oldestGrid = $('oldestGrid');
+  const filterInput = $('filterInput'), filterClear = $('filterClear'), filterCount = $('filterCount');
+  const bolhaContainer = $('bolhaContainer');
+  const galaxiaContainer = $('galaxiaContainer');
+
+  let coinsCache = [], viewedIdCache = null, currentFilter = '', currentCoinId = null;
+  let isLoading = false, refreshTimer = null, abortController = null, filterDebounceTimer = null;
+  let activeView = 'qday', bolhaAnimFrame = null, galaxiaAnimFrame = null;
+  let sessionPaid = false, connectedAccount = null, selectedProvider = null;
+  let selectedNetwork = 'bnb'; 
+
+  const getState = c => {
+    const ch = c.price_change_percentage_24h_in_currency;
+    if (!num(ch)) return { cls: 'neutral', label: t('neutral') };
+    return ch > 0 ? { cls: 'buyer', label: t('buyer') } : ch < 0 ? { cls: 'seller', label: t('seller') } : { cls: 'neutral', label: t('neutral') };
+  };
+
+  const readCache = () => { try { const r = localStorage.getItem(CACHE_KEY); if (!r) return null; const o = JSON.parse(r); if (Date.now() - o.ts > CACHE_TTL) return null; return o; } catch { return null; } };
+  const writeCache = (coins, trending) => { try { const slim = coins.map(c => ({ id: c.id, symbol: c.symbol, name: c.name, image: c.image, current_price: c.current_price, market_cap: c.market_cap, total_volume: c.total_volume, price_change_percentage_24h_in_currency: c.price_change_percentage_24h_in_currency, circulating_supply: c.circulating_supply, fully_diluted_valuation: c.fully_diluted_valuation })); localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), coins: slim, trending })); } catch (_) {} };
+
+  const fetchJSON = async (url, signal) => { const r = await fetch(url, { headers: { Accept: 'application/json' }, signal }); if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); };
+  const getCoins = async (signal) => { const d = await fetchJSON(`${API}/coins/markets?vs_currency=usd&category=${CAT}&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h&precision=full`, signal); return Array.isArray(d) ? d : []; };
+  const getTrending = async (signal) => { try { const d = await fetchJSON(`${API}/search/trending`, signal); return (d.coins || []).map(c => c.item?.id).filter(Boolean); } catch (_) { return []; } };
+
+  const applyI18n = () => {
+    document.title = '🌡 ' + t('appTitle');
+    const set = (id, key) => { const el = $(id); if (el) el.textContent = t(key); };
+    set('appTitle', 'appTitle'); set('appSubtitle', 'subtitle');
+    set('btnInfoText', 'btnInfo'); set('btnQdayText', 'btnQday'); set('btnContactText', 'btnContact');
+    set('btnLangText', 'btnLang'); set('btnBolhaText', 'btnBolha'); set('btnGalaxiaText', 'btnGalaxia');
+    set('featuredTitle', 'featuredTitle'); set('oldestTitleText', 'oldestTitle');
+    set('loadingText', 'loadingCoins');
+    set('bolhaTitleText', 'bolhaTitle'); set('bolhaSubtitle', 'bolhaSubtitle'); set('bolhaBackText', 'bolhaBack');
+    set('bolhaLegBuyer', 'buyer'); set('bolhaLegSeller', 'seller'); set('bolhaLegNeutral', 'neutral');
+    set('galaxiaTitleText', 'galaxiaTitle'); set('galaxiaSubtitle', 'galaxiaSubtitle'); set('galaxiaBackText', 'galaxiaBack');
+    set('galaxiaLegSun', 'legSun'); set('galaxiaLegGiant', 'legGiant'); set('galaxiaLegPlanet', 'legPlanet'); set('galaxiaLegMoon', 'legMoon');
+    set('infoTitle', 'infoTitle'); set('qdayTitle', 'qdayTitle'); set('contactTitle', 'contactTitle');
+    set('contactRole', 'contactRole'); set('contactNote', 'contactNote'); set('langTitle', 'langTitle');
+    set('pwTitle', 'pwTitle'); set('pwSubtitle', 'pwSubtitle'); set('pwDisclaimer', 'pwDisclaimer');
+    set('payTitle', 'payTitle'); set('paySubtitle', 'paySubtitle');
+    set('lblWallet', 'lblWallet'); set('lblNetwork', 'lblNetwork'); set('lblChainId', 'lblChainId');
+    set('lblContract', 'lblContract'); set('lblAmount', 'lblAmount'); set('lblType', 'lblType'); set('lblTypeVal', 'lblTypeVal');
+    set('lblGas', 'lblGas'); set('payBtnText', 'payBtn'); set('backBtnText', 'backBtn');
+    set('confirmTitle', 'confirming'); set('confirmSubtitle', 'confirmSubtitle');
+    filterInput.setAttribute('placeholder', t('filterPH'));
+    const backBtnEl = $('backBtn'); if (backBtnEl) backBtnEl.textContent = '← ' + t('bolhaBack');
+    const lg = $('langOptions');
+    if (lg) lg.querySelectorAll('.lang-option').forEach(b => b.classList.toggle('active', b.getAttribute('data-lang') === currentLang));
+    document.documentElement.lang = currentLang === 'pt-PT' ? 'pt-PT' : currentLang;
+  };
+
+  const cardHTML = (c, isTop, rank, isViewed) => {
+    const st = getState(c);
+    const tags = TAGS[c.id] || {};
+    const tagH = (tags.pqc ? `<span class="coin-tag pqc">${t('pqc')}</span>` : '') + (tags.privacy ? `<span class="coin-tag privacy">${t('privacy')}</span>` : '');
+    const cls = [isTop ? 'featured-card rank-' + rank : 'card', isViewed ? 'most-viewed' : ''].filter(Boolean).join(' ');
+    return `<div class="${cls}" data-coin-id="${esc(c.id)}" role="button" tabindex="0">
+      ${isViewed ? `<span class="view-badge">${t('mostViewed')}</span>` : ''}
+      ${isTop ? `<span class="rank-badge">${['🥇', '🥈', '🥉'][rank - 1]}</span>` : ''}
+      <div class="coin-header"><div class="coin-identity"><img class="coin-logo" src="${esc(c.image)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><div class="coin-name"><span class="name">${esc(c.name)}</span><span class="symbol">${esc(c.symbol)}</span></div></div><div class="coin-price">${fmtPrice(c.current_price)}</div></div>
+      ${tagH ? `<div class="coin-tags">${tagH}</div>` : ''}
+      <div class="vol-row ${st.cls}"><div class="vol-left"><span>🌡</span><div><div class="vol-label">${t('vol24')}</div><div class="vol-value">${compact.format(num(c.total_volume) ? c.total_volume : 0)}</div></div></div><div class="vol-right">${st.label}</div></div>
+    </div>`;
+  };
+
+  const oldestCardHTML = (c, rank) => {
+    const st = getState(c);
+    const year = YEARS[c.id] || '—';
+    return `<div class="oldest-card" data-coin-id="${esc(c.id)}" role="button" tabindex="0"><div class="oldest-badge"><span>${['🥇', '🥈', '🥉'][rank - 1]}</span><span>${rank} · ${year}</span></div><span class="oldest-year-badge">${year}</span><div class="coin-header"><div class="coin-identity"><img class="coin-logo" src="${esc(c.image)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><div class="coin-name"><span class="name">${esc(c.name)}</span><span class="symbol">${esc(c.symbol)}</span></div></div><div class="coin-price">${fmtPrice(c.current_price)}</div></div><div class="vol-row ${st.cls}"><div class="vol-left"><span>🌡</span><div><div class="vol-label">${t('vol24')}</div><div class="vol-value">${compact.format(c.total_volume || 0)}</div></div></div><div class="vol-right">${st.label}</div></div></div>`;
+  };
+
+  const normalize = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const filterCoins = (coins, q) => { if (!q) return coins; const nq = normalize(q); return coins.filter(c => normalize(c.name).includes(nq) || normalize(c.symbol).includes(nq) || normalize(c.id).includes(nq)); };
+
+  const renderAll = () => {
+    const coins = coinsCache, viewed = viewedIdCache, hasF = currentFilter.length > 0;
+    const top3 = [...coins].filter(c => num(c.total_volume) && c.total_volume > 0).sort((a, b) => b.total_volume - a.total_volume).slice(0, 3);
+    const withY = coins.map(c => ({ coin: c, y: YEARS[c.id] })).filter(x => x.y).sort((a, b) => a.y - b.y);
+    const oldest3 = withY.slice(0, 3).map(x => x.coin);
+    const filtered = filterCoins(coins, currentFilter);
+    if (top3.length && !hasF) { featuredGrid.innerHTML = top3.map((c, i) => cardHTML(c, true, i + 1, c.id === viewed)).join(''); featuredEl.classList.add('visible'); }
+    else { featuredEl.classList.remove('visible'); featuredGrid.innerHTML = ''; }
+    if (oldest3.length && !hasF) { oldestGrid.innerHTML = oldest3.map((c, i) => oldestCardHTML(c, i + 1)).join(''); oldestSection.classList.add('visible'); }
+    else { oldestSection.classList.remove('visible'); oldestGrid.innerHTML = ''; }
+    if (!coins.length) gridEl.innerHTML = `<div class="error">${t('noCoins')}</div>`;
+    else if (!filtered.length) gridEl.innerHTML = `<div class="filter-empty">${t('noMatch')} "<strong>${esc(currentFilter)}</strong>".</div>`;
+    else gridEl.innerHTML = filtered.map(c => cardHTML(c, false, 0, c.id === viewed)).join('');
+    filterClear.classList.toggle('visible', hasF);
+    filterCount.textContent = hasF ? `${filtered.length} ${t('of')} ${coins.length}` : '';
+  };
+
+  filterInput.addEventListener('input', e => {
+    const v = e.target.value;
+    filterClear.classList.toggle('visible', v.length > 0);
+    clearTimeout(filterDebounceTimer);
+    filterDebounceTimer = setTimeout(() => { currentFilter = v; renderAll(); }, 120);
+  });
+  filterClear.addEventListener('click', () => { filterInput.value = ''; currentFilter = ''; filterClear.classList.remove('visible'); renderAll(); });
+
+  const renderDetail = async id => {
+    const coin = coinsCache.find(c => c.id === id);
+    if (!coin) { detailContent.innerHTML = `<div class="error">${t('noCoins')}</div>`; return; }
+    const st = getState(coin);
+    const tags = TAGS[coin.id] || {};
+    const year = YEARS[coin.id];
+    const row = (l, v, s = '') => `<tr><td class="lbl">${l}</td><td class="val"><div>${v}</div>${s ? `<div class="sub">${s}</div>` : ''}</td></tr>`;
+    const sRow = (l, v) => !num(v) ? row(l, '—') : row(l, fmtSup(v, coin.symbol), v.toLocaleString('en-US'));
+    let tagRow = '';
+    if (tags.pqc || tags.privacy) {
+      const tp = [];
+      if (tags.pqc) tp.push(`<span class="coin-tag pqc">${t('pqc')}</span>`);
+      if (tags.privacy) tp.push(`<span class="coin-tag privacy">${t('privacy')}</span>`);
+      tagRow = `<tr><td class="lbl">${t('category')}</td><td class="val"><div style="display:flex;justify-content:flex-end;gap:4px">${tp.join('')}</div></td></tr>`;
+    }
+    const tableHTML = `<table class="stats"><tbody>${tagRow}${year ? row(t('launch'), String(year)) : ''}${row(t('cap'), fmtCompact(coin.market_cap), num(coin.market_cap) ? fullUsd.format(coin.market_cap) : '')}${row(t('vol24'), fmtCompact(coin.total_volume), num(coin.total_volume) ? fullUsd.format(coin.total_volume) : '')}${sRow(t('supply'), coin.circulating_supply)}${row(t('fdv'), fmtCompact(coin.fully_diluted_valuation), num(coin.fully_diluted_valuation) ? fullUsd.format(coin.fully_diluted_valuation) : '')}</tbody></table>`;
+    const url = `https://www.coingecko.com/en/coins/${encodeURIComponent(coin.id)}`;
+    detailContent.innerHTML = `<div class="detail-header"><img class="detail-logo" src="${esc(coin.image)}" alt="" onerror="this.style.visibility='hidden'"><div class="detail-header-text"><div class="detail-title-row"><span class="detail-name">${esc(coin.name)}</span><span class="detail-symbol">${esc(coin.symbol)}</span></div><div class="detail-price">${fmtPrice(coin.current_price)}</div><div class="detail-status ${st.cls}">🌡 ${st.label}</div></div></div>${tableHTML}<a class="coingecko-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer"><div class="coingecko-link-left"><span class="coingecko-icon">🔗</span><div><div class="coingecko-label">${t('coingecko')}</div><div class="coingecko-name">${esc(coin.name)}</div></div></div><span class="coingecko-arrow">↗</span></a>`;
+  };
+
+  const showDetail = async id => {
+    qdayView.style.display = 'none'; bolhaView.style.display = 'none'; galaxiaView.style.display = 'none';
+    detailView.classList.add('visible'); window.scrollTo({ top: 0 });
+    if (currentCoinId !== id) { detailContent.innerHTML = `<div class="loading"><div class="spinner"></div><div>${t('loading')}</div></div>`; currentCoinId = id; }
+    await renderDetail(id);
+  };
+  const showView = v => {
+    activeView = v; detailView.classList.remove('visible'); currentCoinId = null;
+    qdayView.style.display = 'none'; bolhaView.style.display = 'none'; galaxiaView.style.display = 'none';
+    if (v === 'qday') qdayView.style.display = '';
+    else if (v === 'bolha') { bolhaView.style.display = ''; renderBolha(); }
+    else if (v === 'galaxia') { galaxiaView.style.display = ''; renderGalaxia(); }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCardActivate = e => {
+    if (e.target.closest('.coingecko-link')) return;
+    const card = e.target.closest('[data-coin-id]');
+    if (!card || detailView.contains(card)) return;
+    if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    location.hash = `coin/${encodeURIComponent(card.getAttribute('data-coin-id'))}`;
+  };
+  document.addEventListener('click', handleCardActivate);
+  document.addEventListener('keydown', handleCardActivate);
+
+  const handleRoute = () => {
+    const h = location.hash || '';
+    if (h.startsWith('#coin/')) { const id = decodeURIComponent(h.slice(6)); if (id) showDetail(id); else showView('qday'); }
+    else if (h === '#bolha') showView('bolha');
+    else if (h === '#galaxia') showView('galaxia');
+    else showView('qday');
+  };
+  window.addEventListener('hashchange', handleRoute);
+  $('backBtn').addEventListener('click', () => { location.hash = ''; });
+  $('backToQdayBtn').addEventListener('click', () => { location.hash = ''; });
+  $('backFromGalaxiaBtn').addEventListener('click', () => { location.hash = ''; });
+  $('bolhaBtn').addEventListener('click', () => { location.hash = '#bolha'; });
+  $('galaxiaBtn').addEventListener('click', () => { location.hash = '#galaxia'; });
+
+  const bubbles = [];
+  let bolhaStart = 0;
+  const renderBolha = () => {
+    if (!bolhaContainer) return;
+    if (!coinsCache.length) { bolhaContainer.innerHTML = `<div class="bolha-empty"><div class="spinner"></div><div>${t('loading')}</div></div>`; return; }
+    bubbles.length = 0; bolhaContainer.innerHTML = '';
+    const w = bolhaContainer.clientWidth, h = bolhaContainer.clientHeight;
+    if (!w || !h) return;
+    const sorted = [...coinsCache].filter(c => num(c.total_volume) && c.total_volume > 0).sort((a, b) => b.total_volume - a.total_volume);
+    if (!sorted.length) { bolhaContainer.innerHTML = `<div class="bolha-empty">${t('noCoins')}</div>`; return; }
+    const maxV = sorted[0].total_volume, minV = sorted[sorted.length - 1].total_volume;
+    const logMin = Math.log10(Math.max(minV, 1)), logMax = Math.log10(Math.max(maxV, 10)), range = logMax - logMin || 1;
+    const maxR = Math.min(w, h) * 0.11, minR = Math.min(w, h) * 0.045;
+    const placed = [];
+    sorted.forEach(coin => {
+      const ratio = (Math.log10(Math.max(coin.total_volume, 1)) - logMin) / range;
+      const radius = minR + (maxR - minR) * Math.max(0, Math.min(1, ratio));
+      let x, y, ok = false;
+      for (let a = 0; a < 120; a++) {
+        x = radius + 8 + Math.random() * Math.max(1, (w - 2 * radius - 16));
+        y = radius + 8 + Math.random() * Math.max(1, (h - 2 * radius - 16));
+        let col = false;
+        for (const p of placed) { const dx = p.x - x, dy = p.y - y; if (Math.sqrt(dx * dx + dy * dy) < p.r + radius + 4) { col = true; break; } }
+        if (!col) { ok = true; break; }
+      }
+      if (!ok) { const cols = Math.max(1, Math.floor(w / (radius * 2 + 8))); const idx = placed.length; x = (idx % cols) * (radius * 2 + 8) + radius + 8; y = Math.floor(idx / cols) * (radius * 2 + 8) + radius + 8; if (y > h - radius) y = h - radius - 8; }
+      placed.push({ x, y, r: radius });
+      const st = getState(coin);
+      const el = document.createElement('div');
+      el.className = `bolha-item ${st.cls}`;
+      if (radius < 30) el.classList.add('tiny');
+      el.style.cssText = `width:${radius * 2}px;height:${radius * 2}px;left:${x - radius}px;top:${y - radius}px;color:${st.cls === 'buyer' ? '#56d364' : st.cls === 'seller' ? '#ff6b6b' : '#b0b8c0'}`;
+      el.setAttribute('data-coin-id', coin.id);
+      el.innerHTML = `<img class="bolha-logo" src="${esc(coin.image)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"><span class="bolha-name">${esc(coin.name)}</span><span class="bolha-symbol">${esc(coin.symbol)}</span>`;
+      el.addEventListener('mouseenter', () => { el.style.zIndex = 50; el.style.transform = 'scale(1.15)'; });
+      el.addEventListener('mouseleave', () => { el.style.zIndex = ''; el.style.transform = 'scale(1)'; });
+      el.addEventListener('click', ev => { ev.stopPropagation(); location.hash = `coin/${encodeURIComponent(coin.id)}`; });
+      bolhaContainer.appendChild(el);
+      bubbles.push({ el, baseX: x, baseY: y, radius, phase: Math.random() * Math.PI * 2, speed: 0.5 + Math.random() * 0.8 });
+    });
+    bolhaStart = performance.now();
+    animateBolha();
+  };
+  const animateBolha = () => {
+    if (activeView !== 'bolha') return;
+    const t0 = (performance.now() - bolhaStart) / 1000;
+    const w = bolhaContainer.clientWidth, h = bolhaContainer.clientHeight;
+    bubbles.forEach(b => {
+      let nx = b.baseX + Math.sin(t0 * b.speed + b.phase) * 8;
+      let ny = b.baseY + Math.cos(t0 * b.speed * 0.8 + b.phase * 1.3) * 6;
+      nx = Math.max(b.radius, Math.min(w - b.radius, nx)); ny = Math.max(b.radius, Math.min(h - b.radius, ny));
+      b.el.style.left = `${nx - b.radius}px`; b.el.style.top = `${ny - b.radius}px`;
+    });
+    bolhaAnimFrame = requestAnimationFrame(animateBolha);
+  };
+
+  const bodies = [];
+  let galaxiaStart = 0;
+  const SPEED = 0.06;
+  const renderGalaxia = () => {
+    if (!galaxiaContainer) return;
+    if (!coinsCache.length) { const e = galaxiaContainer.querySelector('.galaxia-empty'); if (e) e.style.display = 'flex'; return; }
+    bodies.forEach(b => b.el && b.el.parentNode && b.el.parentNode.removeChild(b.el));
+    bodies.length = 0;
+    galaxiaContainer.querySelectorAll('.galaxia-sun, .galaxia-orbit, .galaxia-body').forEach(el => el.remove());
+    const emptyEl = galaxiaContainer.querySelector('.galaxia-empty');
+    if (emptyEl) emptyEl.style.display = 'none';
+    const w = galaxiaContainer.clientWidth, h = galaxiaContainer.clientHeight;
+    if (!w || !h) return;
+    const sorted = [...coinsCache].filter(c => num(c.total_volume) && c.total_volume > 0 && num(c.market_cap) && c.market_cap > 0).sort((a, b) => (b.total_volume * b.market_cap) - (a.total_volume * a.market_cap));
+    if (!sorted.length) return;
+    const sunCoin = sorted[0];
+    const sunSize = Math.min(w, h) * 0.16;
+    const sunEl = document.createElement('div');
+    sunEl.className = 'galaxia-sun';
+    sunEl.style.cssText = `width:${sunSize}px;height:${sunSize}px`;
+    sunEl.setAttribute('data-coin-id', sunCoin.id);
+    sunEl.innerHTML = `<div class="galaxia-sun-core"><img class="galaxia-sun-logo" src="${esc(sunCoin.image)}" alt="" onerror="this.style.visibility='hidden'"></div><span class="galaxia-sun-label">☀️ ${esc(sunCoin.symbol.toUpperCase())}</span>`;
+    sunEl.addEventListener('click', ev => { ev.stopPropagation(); location.hash = `coin/${encodeURIComponent(sunCoin.id)}`; });
+    galaxiaContainer.appendChild(sunEl);
+    const planets = sorted.slice(1);
+    if (!planets.length) { galaxiaStart = performance.now(); return; }
+    const maxV = planets[0].total_volume, minV = planets[planets.length - 1].total_volume;
+    const logMin = Math.log10(Math.max(minV, 1)), logMax = Math.log10(Math.max(maxV, 10)), range = logMax - logMin || 1;
+    const sunR = sunSize / 2, minO = sunR + Math.min(w, h) * 0.06, maxO = Math.min(w, h) * 0.46;
+    const orbitCount = Math.min(3, Math.max(1, Math.ceil(planets.length / 3)));
+    const orbitRadii = [];
+    for (let i = 0; i < orbitCount; i++) { const tt = (i + 1) / orbitCount; orbitRadii.push(minO + (maxO - minO) * tt); }
+    const byOrbit = orbitRadii.map(() => []);
+    planets.forEach((p, i) => byOrbit[i % orbitCount].push(p));
+    orbitRadii.forEach((r, i) => { const o = document.createElement('div'); o.className = 'galaxia-orbit'; o.style.cssText = `width:${r * 2}px;height:${r * 2}px;border-color:rgba(192,132,252,${0.15 + i * 0.05})`; galaxiaContainer.appendChild(o); });
+    const minR = Math.min(w, h) * 0.022, maxR = Math.min(w, h) * 0.055;
+    byOrbit.forEach((orb, oi) => {
+      const orbitR = orbitRadii[oi], cnt = orb.length;
+      if (!cnt) return;
+      orb.forEach((coin, i) => {
+        const phase = (i / cnt) * Math.PI * 2, speed = SPEED / (1 + oi * 0.35);
+        const ratio = (Math.log10(Math.max(coin.total_volume, 1)) - logMin) / range;
+        const radius = minR + (maxR - minR) * Math.max(0, Math.min(1, ratio));
+        const cls = ratio >= 0.7 ? 'giant' : ratio >= 0.35 ? 'planet' : 'moon';
+        const el = document.createElement('div');
+        el.className = `galaxia-body ${cls}`;
+        el.style.cssText = `width:${radius * 2}px;height:${radius * 2}px`;
+        el.setAttribute('data-coin-id', coin.id);
+        el.innerHTML = `<img class="galaxia-logo" src="${esc(coin.image)}" alt="" onerror="this.style.visibility='hidden'"><span class="galaxia-label">${esc(coin.symbol.toUpperCase())}</span>`;
+        el.addEventListener('click', ev => { ev.stopPropagation(); location.hash = `coin/${encodeURIComponent(coin.id)}`; });
+        galaxiaContainer.appendChild(el);
+        bodies.push({ el, radius, orbitR, phase, speed });
+      });
+    });
+    galaxiaStart = performance.now();
+    animateGalaxia();
+  };
+  const animateGalaxia = () => {
+    if (activeView !== 'galaxia') return;
+    const t0 = (performance.now() - galaxiaStart) / 1000;
+    const cx = galaxiaContainer.clientWidth / 2, cy = galaxiaContainer.clientHeight / 2;
+    bodies.forEach(b => {
+      const a = b.phase + t0 * b.speed;
+      b.el.style.left = `${cx + Math.cos(a) * b.orbitR - b.radius}px`;
+      b.el.style.top = `${cy + Math.sin(a) * b.orbitR - b.radius}px`;
+    });
+    galaxiaAnimFrame = requestAnimationFrame(animateGalaxia);
+  };
+
+  window.addEventListener('resize', () => {
+    if (activeView === 'galaxia') { clearTimeout(window._gr); window._gr = setTimeout(renderGalaxia, 300); }
+    if (activeView === 'bolha') { clearTimeout(window._br); window._br = setTimeout(renderBolha, 300); }
+  });
+
+  const infoModal = $('infoModal'), qdayInfoModal = $('qdayInfoModal'), contactModal = $('contactModal'), langModal = $('langModal');
+  const openModal = m => { m.classList.add('open'); document.body.style.overflow = 'hidden'; };
+  const closeModal = m => { m.classList.remove('open'); document.body.style.overflow = ''; };
+
+  $('infoBtn').addEventListener('click', () => {
+    $('infoModalBody').innerHTML = `<div class="modal-section"><h3>⚛️ ${currentLang === 'en' ? 'Quantum Computing' : currentLang === 'es' ? 'Computación Cuántica' : 'Computação Quântica'}</h3><p>${currentLang === 'en' ? 'Quantum computers use <strong>qubits</strong> in multiple states.' : currentLang === 'es' ? 'Usa <strong>qubits</strong>.' : 'Computadores quânticos usam <strong>qubits</strong> em múltiplos estados.'}</p></div><div class="modal-section"><h3>💀 Q-Day</h3><p>2030–2040</p></div><div class="modal-callout"><strong>⚠️ DYOR</strong></div>`;
+    openModal(infoModal);
+  });
+  $('infoModalClose').addEventListener('click', () => closeModal(infoModal));
+  infoModal.addEventListener('click', e => { if (e.target === infoModal) closeModal(infoModal); });
+
+  $('qdayInfoBtn').addEventListener('click', () => {
+    $('qdayInfoModalBody').innerHTML = `<div class="modal-section"><h3>📚 ${currentLang === 'en' ? 'Educational' : currentLang === 'es' ? 'Educativo' : 'Educacional'}</h3><p>${currentLang === 'en' ? 'Educational content only.' : currentLang === 'es' ? 'Contenido educativo.' : 'Conteúdo educacional.'}</p></div><div class="modal-callout"><strong>⚠️ DYOR</strong></div>`;
+    openModal(qdayInfoModal);
+  });
+  $('qdayInfoModalClose').addEventListener('click', () => closeModal(qdayInfoModal));
+  qdayInfoModal.addEventListener('click', e => { if (e.target === qdayInfoModal) closeModal(qdayInfoModal); });
+
+  $('contactBtn').addEventListener('click', () => openModal(contactModal));
+  $('contactModalClose').addEventListener('click', () => closeModal(contactModal));
+  contactModal.addEventListener('click', e => { if (e.target === contactModal) closeModal(contactModal); });
+
+  $('langBtn').addEventListener('click', () => { applyI18n(); openModal(langModal); });
+  $('langModalClose').addEventListener('click', () => closeModal(langModal));
+  langModal.addEventListener('click', e => { if (e.target === langModal) closeModal(langModal); });
+
+  $('langOptions').addEventListener('click', e => {
+    const b = e.target.closest('.lang-option');
+    if (!b) return;
+    const l = b.getAttribute('data-lang');
+    if (!I18N[l]) return;
+    currentLang = l;
+    try { localStorage.setItem('qday_lang', l); } catch (_) {}
+    applyI18n();
+    renderAll();
+    if (currentCoinId) renderDetail(currentCoinId);
+    if (activeView === 'bolha') renderBolha();
+    if (activeView === 'galaxia') renderGalaxia();
+    updatePaywallTexts();
+    closeModal(langModal);
+  });
+
+  const updatePaywallTexts = () => {
+    if (hasContract) payContract.textContent = t('contractYes') + ' (' + shortAddr(CONTRACT_ADDRESS.trim()) + ')';
+    else payContract.textContent = t('contractFallback');
+  };
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') [infoModal, qdayInfoModal, contactModal, langModal].forEach(m => m.classList.contains('open') && closeModal(m));
+  });
+
+  // =====================================================================
+  // ===== WEB3 =====
+  // =====================================================================
+  const paywallScreen = $('paywallScreen');
+  const walletSelectScreen = $('walletSelectScreen');
+  const payScreen = $('payScreen');
+  const confirmScreen = $('confirmScreen');
+  const paywallStatus = $('paywallStatus');
+  const paywallStatusText = $('paywallStatusText');
+  const payStatus = $('payStatus');
+  const payStatusText = $('payStatusText');
+  const payWallet = $('payWallet');
+  const payNetwork = $('payNetwork');
+  const payChainId = $('payChainId');
+  const payContract = $('payContract');
+  const payEstimate = $('payEstimate');
+  const gasEstimate = $('gasEstimate');
+  const payBtn = $('payBtn');
+  const backToWalletsBtn = $('backToWalletsBtn');
+  const forceNetworkBtn = $('forceNetworkBtn');
+  const confirmTxHash = $('confirmTxHash');
+  const confirmBscScan = $('confirmBscScan');
+  const netWarning = $('netWarning');
+
+  // 🔥 PLANO B: Verifica se o contrato está vazio. Se estiver, usa o Fallback (transferência direta)
+  const hasContract = /^0x[a-fA-F0-9]{40}$/.test((CONTRACT_ADDRESS || '').trim());
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  document.querySelectorAll('.net-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.net-btn').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      selectedNetwork = e.target.dataset.net;
+      
+      if (selectedNetwork !== 'bnb') netWarning.style.display = 'block';
+      else netWarning.style.display = 'none';
+    });
+  });
+
+  const detectWallets = () => {
+    const eth = window.ethereum;
+    const provs = eth?.providers || [];
+    const has = (...keys) => provs.length ? provs.some(p => keys.some(k => !!p[k])) : !!(eth && keys.some(k => !!eth[k]));
+    return { trust: has('isTrust', 'isTrustWallet'), binance: has('isBinance', 'isBinanceWallet') || !!window.BinanceChain, metamask: has('isMetaMask') };
+  };
+
+  const getProviderFor = (type) => {
+    const eth = window.ethereum;
+    const provs = eth?.providers || [];
+    if (provs.length) {
+      const found = provs.find(p => {
+        if (type === 'trust') return p.isTrust || p.isTrustWallet;
+        if (type === 'binance') return p.isBinance || p.isBinanceWallet;
+        if (type === 'metamask') return p.isMetaMask;
+        return false;
+      });
+      if (found) return found;
+    }
+    if (type === 'trust' && (eth?.isTrust || eth?.isTrustWallet)) return eth;
+    if (type === 'binance') { if (eth?.isBinance || eth?.isBinanceWallet) return eth; if (window.BinanceChain) return window.BinanceChain; }
+    if (type === 'metamask' && eth?.isMetaMask) return eth;
+    return null;
+  };
+
+  const detectWalletName = (provider, type) => {
+    if (type) return { trust: 'Trust Wallet', binance: 'Binance Wallet', metamask: 'MetaMask' }[type] || 'Web3';
+    const p = provider || window.ethereum;
+    if (!p) return 'Web3';
+    if (p.isTrust || p.isTrustWallet) return 'Trust Wallet';
+    if (p.isBinance || p.isBinanceWallet) return 'Binance Wallet';
+    if (p.isMetaMask) return 'MetaMask';
+    return 'Web3';
+  };
+
+  const getDeepLink = (type) => {
+    const u = window.location;
+    const url = encodeURIComponent(u.href);
+    const path = u.host + u.pathname + u.search + u.hash;
+    const map = {
+      trust: `https://link.trustwallet.com/open_url?coin_id=714&url=${url}`,
+      binance: `https://app.binance.com/deeplink?deeplinkType=1&url=${url}`,
+      metamask: `https://metamask.app.link/dapp/${path}`
+    };
+    return map[type] || null;
+  };
+
+  const getInstallLink = (type) => {
+    const map = { trust: 'https://trustwallet.com/download', binance: 'https://www.binance.com/en/web3wallet', metamask: 'https://metamask.io/download/' };
+    return map[type] || null;
+  };
+
+  const updateWalletDetection = () => {
+    const avail = detectWallets();
+    document.querySelectorAll('.wallet-btn').forEach(btn => {
+      const type = btn.dataset.wallet;
+      const badge = btn.querySelector('.wallet-detected');
+      const ok = !!avail[type];
+      btn.classList.toggle('not-detected', !ok);
+      if (badge) badge.style.display = ok ? 'inline-block' : 'none';
+    });
+  };
+
+  const setPaywallStatus = (type, icon, msg) => { paywallStatus.className = 'paywall-status ' + (type || ''); paywallStatus.querySelector('.paywall-status-icon').textContent = icon; paywallStatusText.innerHTML = msg; };
+  const setPayStatus = (type, icon, msg) => { payStatus.className = 'paywall-status ' + (type || ''); payStatus.querySelector('.paywall-status-icon').textContent = icon; payStatusText.innerHTML = msg; };
+  const showScreen = s => { walletSelectScreen.style.display = s === 'select' ? '' : 'none'; payScreen.style.display = s === 'pay' ? '' : 'none'; confirmScreen.style.display = s === 'confirm' ? '' : 'none'; };
+
+  const showPaywall = (msg) => {
+    paywallScreen.classList.add('show');
+    qdayView.style.display = 'none'; bolhaView.style.display = 'none'; galaxiaView.style.display = 'none';
+    detailView.classList.remove('visible');
+    showScreen('select');
+    updateWalletDetection();
+    updatePaywallTexts();
+    setPaywallStatus('', '💡', msg || t('selectWalletPrompt'));
+  };
+
+  const getChainId = async (provider) => {
+    try { const hex = await provider.request({ method: 'eth_chainId' }); return parseInt(hex, 16); }
+    catch (_) { return 0; }
+  };
+
+  const ensureBSC = async (provider) => {
+    let chainId = await getChainId(provider);
+    if (chainId === BSC_CHAIN_ID) return true;
+
+    try {
+      await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BSC_HEX }] });
+    } catch (err) {
+      if (err.code === 4902 || err.code === -32603) {
+        try {
+          await provider.request({ method: 'wallet_addEthereumChain', params: [BSC_CFG] });
+        } catch (addErr) {
+          if (addErr.code === 4001) throw new Error('Você recusou adicionar a rede BSC.');
+          throw new Error('Não foi possível adicionar a rede BSC automaticamente.<br>Adicione manualmente:<br>Nome: Smart Chain<br>RPC: https://bsc-dataseed.binance.org/<br>Chain ID: 56<br>Símbolo: BNB<br>Explorador: https://bscscan.com');
+        }
+      } else if (err.code === 4001) {
+        throw new Error('Você recusou trocar para BNB Smart Chain.');
+      } else {
+        throw err;
+      }
+    }
+
+    chainId = await getChainId(provider);
+    if (chainId !== BSC_CHAIN_ID) {
+      throw new Error('A rede não mudou para BNB Smart Chain. Troque manualmente na sua carteira.');
+    }
+    return true;
+  };
+
+  const fetchBNBPrice = async () => {
+    try {
+      const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd');
+      const d = await r.json();
+      const p = d.binancecoin?.usd;
+      if (p > 0) return p;
+    } catch (e) {
+      console.warn('CoinGecko API error, using fallback price.', e);
+    }
+    return 600; 
+  };
+
+  const updateGasPrice = async (bnbPrice) => {
+    if (!selectedProvider) return;
+    try {
+      const bp = new ethers.BrowserProvider(selectedProvider);
+      const feeData = await bp.getFeeData();
+      const gasPrice = feeData.gasPrice || ethers.parseUnits('5', 'gwei');
+      const gasLimit = hasContract ? 250000n : 21000n; 
+      
+      const gasCostWei = gasPrice * gasLimit;
+      const gasCostBnb = Number(ethers.formatEther(gasCostWei));
+      const gasCostUsd = gasCostBnb * bnbPrice;
+
+      gasEstimate.textContent = `~${gasCostBnb.toFixed(6)} BNB (~$${gasCostUsd.toFixed(2)})`;
+    } catch (e) {
+      gasEstimate.textContent = `~$0.02 - $0.05`;
+    }
+  };
+
+  let estimateToken = 0;
+  const updateEstimate = async () => {
+    const myToken = ++estimateToken;
+    try {
+      const price = await fetchBNBPrice();
+      if (myToken !== estimateToken) return;
+      
+      const bnb = FEE_USD / price;
+      payEstimate.textContent = `${bnb.toFixed(6)} BNB (~$${price.toFixed(2)})`;
+      
+      await updateGasPrice(price);
+    } catch (e) {
+      if (myToken === estimateToken) payEstimate.textContent = t('unavailable');
+    }
+  };
+
+  forceNetworkBtn.addEventListener('click', async () => {
+    if (!selectedProvider) return;
+    try {
+      setPayStatus('wait', '⏳', 'Solicitando troca de rede...');
+      await ensureBSC(selectedProvider);
+      const cid = await getChainId(selectedProvider);
+      if (cid === BSC_CHAIN_ID) {
+        setPayStatus('ok', '✅', 'Rede alterada com sucesso. Prossiga com o pagamento.');
+        payBtn.disabled = false;
+        forceNetworkBtn.style.display = 'none';
+      }
+    } catch (e) {
+      setPayStatus('err', '❌', e.message);
+    }
+  });
+
+  // 🔥 FUNÇÃO DE PAGAMENTO (PLANO B - TRANSFERÊNCIA DIRETA)
+  const payAccess = async () => {
+    const provider = selectedProvider;
+    if (!provider) throw new Error('Carteira não encontrada.');
+    if (!window.ethers) throw new Error('Biblioteca ethers não carregou. Recarregue a página.');
+
+    setPayStatus('wait', '⏳', 'Verificando rede...');
+    await ensureBSC(provider);
+    
+    const cid = await getChainId(provider);
+    if (cid !== BSC_CHAIN_ID) {
+      forceNetworkBtn.style.display = 'flex';
+      throw new Error('Sua carteira não está na rede BNB Smart Chain. Clique em "Forçar Rede BNB" ou mude na carteira.');
+    }
+
+    const accounts = await provider.request({ method: 'eth_accounts' });
+    if (!accounts || !accounts.length) throw new Error('Conta não autorizada. Reconecte a carteira.');
+    const signerAddress = accounts[0];
+
+    const bp = new ethers.BrowserProvider(provider);
+    const signer = await bp.getSigner(signerAddress);
+
+    setPayStatus('wait', '⏳', 'Calculando taxa exata...');
+    const coinGeckoPrice = await fetchBNBPrice();
+    const valueInBnb = FEE_USD / coinGeckoPrice;
+    const valueWei = ethers.parseEther(valueInBnb.toFixed(18));
+
+    const gasLimit = hasContract ? 250000n : 21000n;
+    const gasPrice = ethers.parseUnits('5', 'gwei');
+    const gasCostWei = gasPrice * gasLimit;
+    const totalRequired = valueWei + gasCostWei;
+
+    const balance = await bp.getBalance(signerAddress);
+    if (balance < totalRequired) {
+      throw new Error(`Saldo insuficiente. Você precisa de pelo menos ${ethers.formatEther(totalRequired)} BNB (Taxa + Gas). Seu saldo atual: ${ethers.formatEther(balance)} BNB.`);
+    }
+
+    // Se tiver contrato, usa o contrato. Se não, usa o fallback direto.
+    if (hasContract) {
+      setPayStatus('wait', '⏳', 'Abrindo contrato inteligente...');
+      const contract = new ethers.Contract(CONTRACT_ADDRESS.trim(), CONTRACT_ABI, signer);
+
+      setPayStatus('wait', '⏳', 'Aguardando aprovação na carteira...');
+      const tx = await contract.pay({ value: valueWei, gasLimit: gasLimit, gasPrice: gasPrice });
+      
+      setPayStatus('wait', '⏳', `Transação enviada! Aguardando a blockchain validar...`);
+      
+      const receipt = await Promise.race([
+        tx.wait(1),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('Tempo limite excedido. A transação pode estar pendente na rede. Verifique no BscScan.')), 120000))
+      ]);
+
+      if (!receipt || receipt.status !== 1) {
+        throw new Error('A transação falhou na blockchain. Verifique se há saldo suficiente para o gas.');
+      }
+
+      return { txHash: tx.hash, bnb: valueInBnb };
+    } else {
+      // FALLBACK (PLANO B)
+      setPayStatus('wait', '⏳', 'Aguardando aprovação na carteira...');
+      const tx = await signer.sendTransaction({ 
+        to: FEE_RECEIVER, 
+        value: valueWei, 
+        gasLimit: 21000n, 
+        gasPrice: gasPrice 
+      });
+      
+      setPayStatus('wait', '⏳', `Transação enviada! Aguardando confirmação...`);
+      
+      const receipt = await Promise.race([
+        tx.wait(1),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('Tempo limite excedido. A transação pode estar pendente.')), 120000))
+      ]);
+
+      if (!receipt || receipt.status !== 1) {
+        throw new Error('A transação falhou na blockchain.');
+      }
+
+      return { txHash: tx.hash, bnb: valueInBnb };
+    }
+  };
+
+  const grantAccessAndShowApp = async () => {
+    sessionPaid = true;
+    paywallScreen.classList.remove('show');
+    qdayView.style.display = '';
+    handleRoute();
+    if (!coinsCache.length) { try { await load(); } catch (_) {} }
+    if (!refreshTimer) refreshTimer = setInterval(() => load(true), REFRESH_MS);
+  };
+
+  const resetSession = (msg) => {
+    sessionPaid = false;
+    connectedAccount = null;
+    selectedProvider = null;
+    currentCoinId = null;
+    currentFilter = '';
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
+    if (filterInput) filterInput.value = '';
+    if (filterClear) filterClear.classList.remove('visible');
+    if (filterCount) filterCount.textContent = '';
+    if (abortController) { abortController.abort(); abortController = null; }
+    if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+    if (bolhaAnimFrame) { cancelAnimationFrame(bolhaAnimFrame); bolhaAnimFrame = null; }
+    if (galaxiaAnimFrame) { cancelAnimationFrame(galaxiaAnimFrame); galaxiaAnimFrame = null; }
+    coinsCache = []; viewedIdCache = null;
+    payBtn.disabled = false;
+    payEstimate.textContent = t('calculating');
+    payWallet.textContent = '—';
+    payNetwork.textContent = '...';
+    payChainId.textContent = '—';
+    forceNetworkBtn.style.display = 'none';
+    showPaywall(msg);
+  };
+
+  const boundProviders = new WeakSet();
+  const bindProviderEvents = (provider) => {
+    if (!provider || !provider.on || boundProviders.has(provider)) return;
+    boundProviders.add(provider);
+    provider.on('accountsChanged', () => { if (sessionPaid) resetSession(t('walletChanged')); });
+    
+    provider.on('chainChanged', async (chainId) => {
+      const cid = parseInt(chainId, 16);
+      if (!sessionPaid) {
+        if (cid === BSC_CHAIN_ID) {
+          payNetwork.innerHTML = `<span style="color:#3fb950">✓ BNB Smart Chain</span>`;
+          payChainId.textContent = BSC_CHAIN_ID + ' ✓';
+          setPayStatus('', '💡', t('confirmReady'));
+          payBtn.disabled = false;
+          forceNetworkBtn.style.display = 'none';
+        } else {
+          payNetwork.innerHTML = `<span style="color:#ff9492">✗ Rede incorreta</span>`;
+          payChainId.textContent = cid + ' ✗';
+          setPayStatus('err', '❌', 'Rede incorreta. Mude para BNB Smart Chain na sua carteira.');
+          payBtn.disabled = true;
+          forceNetworkBtn.style.display = 'flex';
+        }
+      } else {
+        if (cid !== BSC_CHAIN_ID) resetSession(t('networkChanged'));
+      }
+    });
+    
+    provider.on('disconnect', () => { if (sessionPaid) resetSession(t('walletDisconnected')); });
+  };
+
+  let walletBusy = false;
+  const selectWallet = async (type) => {
+    if (walletBusy) return;
+
+    const eth = window.ethereum;
+    let isInsideDappBrowser = false;
+
+    if (type === 'trust' && eth && (eth.isTrust || eth.isTrustWallet)) isInsideDappBrowser = true;
+    if (type === 'metamask' && eth && eth.isMetaMask) isInsideDappBrowser = true;
+    if (type === 'binance' && (eth?.isBinance || eth?.isBinanceWallet || window.BinanceChain)) isInsideDappBrowser = true;
+
+    if (isMobile && !isInsideDappBrowser) {
+      const link = getDeepLink(type);
+      if (link) {
+        setPaywallStatus('wait', '⏳', 'Abrindo no navegador interno da carteira...');
+        setTimeout(() => { window.location.href = link; }, 500);
+        return;
+      }
+    }
+
+    const provider = getProviderFor(type);
+    if (!provider) {
+      if (isMobile) {
+        const link = getDeepLink(type);
+        if (link) { setPaywallStatus('wait', '⏳', 'Abrindo carteira...'); window.location.href = link; return; }
+      }
+      const install = getInstallLink(type);
+      const walletName = { trust: 'Trust Wallet', binance: 'Binance Wallet', metamask: 'MetaMask' }[type] || 'Wallet';
+      setPaywallStatus('err', '❌', `${walletName} ${t('walletNotDetected')} ${install ? '→ ' + install.split('/')[2] : ''}`);
+      return;
+    }
+
+    walletBusy = true;
+    document.querySelectorAll('.wallet-btn').forEach(b => b.disabled = true);
+    selectedProvider = provider;
+
+    try {
+      setPaywallStatus('wait', '⏳', t('walletConnected') + '…');
+      const accounts = await provider.request({ method: 'eth_requestAccounts' });
+      if (!accounts || !accounts.length) throw new Error('No account.');
+      connectedAccount = accounts[0];
+
+      setPaywallStatus('wait', '⏳', '...');
+      await ensureBSC(provider);
+      const cidAfter = await getChainId(provider);
+
+      const walletName = detectWalletName(provider, type);
+      payWallet.textContent = shortAddr(connectedAccount) + ' · ' + walletName;
+      payNetwork.innerHTML = cidAfter === BSC_CHAIN_ID ? `<span style="color:#3fb950">${t('networkOK')}</span>` : `<span style="color:#ff9492">${t('networkErr')}</span>`;
+      payChainId.textContent = cidAfter + (cidAfter === BSC_CHAIN_ID ? ' ✓' : ' ✗');
+      updatePaywallTexts();
+      bindProviderEvents(provider);
+      showScreen('pay');
+
+      if (cidAfter !== BSC_CHAIN_ID) { 
+        setPayStatus('err', '❌', 'Rede incorreta. Mude na sua carteira ou clique em Forçar Rede.'); 
+        payBtn.disabled = true; 
+        forceNetworkBtn.style.display = 'flex';
+      } else { 
+        setPayStatus('', '💡', t('confirmReady')); 
+        payBtn.disabled = false; 
+        forceNetworkBtn.style.display = 'none';
+      }
+
+      updateEstimate();
+    } catch (err) {
+      selectedProvider = null;
+      if (err.code === 4001) {
+        setPaywallStatus('err', '🚫', t('walletCancel'));
+      } else {
+        setPaywallStatus('err', '❌', err.message || 'Error');
+      }
+    } finally {
+      walletBusy = false;
+      document.querySelectorAll('.wallet-btn').forEach(b => b.disabled = false);
+    }
+  };
+
+  document.querySelectorAll('.wallet-btn').forEach(btn => btn.addEventListener('click', () => selectWallet(btn.dataset.wallet)));
+
+  backToWalletsBtn.addEventListener('click', () => {
+    showScreen('select');
+    updateWalletDetection();
+    setPaywallStatus('', '💡', t('selectWalletPrompt'));
+  });
+
+  payBtn.addEventListener('click', async () => {
+    if (payBtn.disabled) return;
+    payBtn.disabled = true;
+    try {
+      setPayStatus('wait', '⏳', 'Iniciando pagamento...');
+      const r = await payAccess();
+      setPayStatus('ok', '🎉', `Pagamento confirmado! TX: ${r.txHash.slice(0, 12)}…`);
+      showScreen('confirm');
+      confirmTxHash.textContent = 'TX: ' + r.txHash;
+      confirmBscScan.href = 'https://bscscan.com/tx/' + r.txHash;
+      setTimeout(() => grantAccessAndShowApp(), 2000);
+    } catch (err) {
+      payBtn.disabled = false;
+      console.error('payAccess error:', err);
+      let msg = err.message || 'Falha no pagamento.';
+      if (err.code === 4001 || msg.toLowerCase().includes('user rejected')) msg = 'Você cancelou a transação na carteira.';
+      else if (msg.toLowerCase().includes('insufficient funds')) msg = 'Saldo de BNB insuficiente para pagar a taxa + gas.';
+      setPayStatus('err', '❌', msg);
+    }
+  });
+
+  const load = async (force = false) => {
+    if (document.hidden || isLoading || !sessionPaid) return;
+    if (!force) {
+      const cached = readCache();
+      if (cached) {
+        coinsCache = cached.coins;
+        viewedIdCache = (cached.trending || []).find(id => cached.coins.some(c => c.id === id)) || [...cached.coins].filter(c => num(c.total_volume) && c.total_volume > 0).sort((a, b) => b.total_volume - a.total_volume)[0]?.id;
+        renderAll();
+        lastUpdate.textContent = t('updated') + ' ' + new Date(cached.ts).toLocaleTimeString() + ' ' + t('cache');
+        if (activeView === 'bolha') renderBolha();
+        if (activeView === 'galaxia') renderGalaxia();
+        return;
+      }
+    }
+    isLoading = true;
+    if (abortController) abortController.abort();
+    abortController = new AbortController();
+    try {
+      const [coins, trending] = await Promise.all([getCoins(abortController.signal), getTrending(abortController.signal)]);
+      if (abortController.signal.aborted || !sessionPaid) return;
+      writeCache(coins, trending);
+      coinsCache = coins;
+      viewedIdCache = trending.find(id => coins.some(c => c.id === id)) || [...coins].filter(c => num(c.total_volume) && c.total_volume > 0).sort((a, b) => b.total_volume - a.total_volume)[0]?.id;
+      renderAll();
+      lastUpdate.textContent = t('updated') + ' ' + new Date().toLocaleTimeString();
+      if (activeView === 'bolha') renderBolha();
+      if (activeView === 'galaxia') renderGalaxia();
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      if (!gridEl.querySelector('[data-coin-id]')) gridEl.innerHTML = `<div class="error">⚠️ ${esc(err.message)}</div>`;
+    } finally { isLoading = false; }
+  };
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && sessionPaid && !coinsCache.length) load(true);
+  });
+
+  applyI18n();
+  updateWalletDetection();
+  showPaywall(t('selectWalletPrompt'));
+})();
+</script>
+</body>
+</html>
